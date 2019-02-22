@@ -2,12 +2,12 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: py:light
+#     formats: ipynb,py
 #     text_representation:
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 0.8.6
+#       jupytext_version: 1.0.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -17,23 +17,27 @@
 # # Le problème
 #
 # Pour garantir l'équilibre offre-demande à chaque instant, RTE construit ses propres prévisions de la consommation nationale, régionale, et locale. 
-# Nous nous concentrons ici sur la prévision nationale. Un challenge lancé par RTE (https://www.datascience.net/fr/challenge/33/details) a permis de tester des approches alternatives aux modèles internes (POPCORN, PREMIS)
-# Un tout nouveau* data challenge vient d'être lancé sur la plateforme dataScience.net pour aider RTE a faire de meilleures prévisions de conso ! 
 #
+# Nous nous concentrons ici sur la prévision nationale. Un challenge lancé par RTE (https://dataanalyticspost.com/wp-content/uploads/2017/06/Challenge-RTE-Prevision-de-Consommation.pdf) a permis de tester des approches alternatives aux modèles internes (POPCORN, PREMIS).
+#
+# Comme dans ce challenge, nous voulons aider RTE a faire de meilleures prévisions de conso ! 
 
 # ## Un outil: le Machine Learning
-# Pour cela nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend et s'adapte au contexte sans programmer un système expert avec des "centaines" de règles en dur par de la programmation logique. Le Machine Learning nécessite toutefois de la connaissance experte dans le domaine d'intérêt pour créer des modèles pertinents et efficaces. En effet, si notre modèle embarque trop de variables peu explicatives, il sera noyé dans l'information, surapprendra sur les exemples qu'on lui a montrés, et aura du mal à généraliser en prédisant avec justesse sur de nouveaux exemples. 
+#
+# Pour cela nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend et s'adapte au contexte sans programmer un système expert avec des "centaines" de règles en dur par de la programmation logique. 
+#
+# Le Machine Learning nécessite toutefois de la connaissance experte dans le domaine d'intérêt pour créer des modèles pertinents et efficaces. En effet, si notre modèle embarque trop de variables peu explicatives, il sera noyé dans l'information, surapprendra sur les exemples qu'on lui a montrés, et aura du mal à généraliser en prédisant avec justesse sur de nouveaux exemples. 
 
 # ## Une difficulté: le feature engineering
-# Au-delà de la simple sélection de variables pertinentes, on fait surtout ce que l'on appelle du feature engineering avec notre expertise: on créé des variables transformées ou aggrégées, comme une consommation moyenne sur le mois précédent ou une température moyenne sur la France, pour guider l'algorithme à apprendre sur l'information la plus pertinente et synthétique.
-# Cela suppose de bien connaître nos données, de les traiter et de les visualiser avec différents algorithmes au préalable.
 #
-# Nous allons ici voir ce que cela implique en terme de développement et d'implémentation de participer à un tel challenge, en montrant les capacités du Machine Learning sur la base de modèles "classiques", et aussi leurs limites.
+# Au-delà de la simple sélection de variables pertinentes, on fait surtout ce que l'on appelle du feature engineering avec notre expertise: on crée des variables transformées ou aggrégées, comme une consommation moyenne sur le mois précédent ou une température moyenne sur la France, pour guider l'algorithme à apprendre sur l'information la plus pertinente et synthétique. Cela implique de bien connaître nos données, de passer du temps à les visualiser, et de les prétraiter avant de les fournir au modèle de machine-learning.
+#
+# Nous allons ici voir ce que cela implique en terme de développement et d'implémentation de participer à un tel challenge, en montrant les capacités du Machine Learning sur la base de modèles "classiques".
 #
 # ## Ce que l'on va voir dans ce premier TP :
 # 1) Formaliser le problème: que souhaite-t-on prédire (quel est mon Y) ? Avec quelles variables explicatives (quel est mon X) ?
 #
-# 2) Collecter les données: où se trouvent les données ? Quel est le format ? Comment les récupérer ? (FACULTATIF)
+# 2) Collecter les données: où se trouvent les données ? Quel est le format ? Comment les récupérer ? (FACULTATIF - voir TP "TP1_Preparation_donnees")
 #
 # 3) Investiguer les données: visualiser des séries temporelles, faire quelques statistiques descriptives
 #
@@ -52,7 +56,7 @@
 
 # # Dimensionnement en temps
 # On prévoit un une durée d'environ 2h pour ce TP1, debrief inclus :
-# - 20-30 minutes pour charger et préparer les données
+# - 20-30 minutes pour charger et préparer les données [FACULTATIF]
 # - 30-40 minutes pour analyser et visualiser les données
 # - 45-60 minutes pour créer, entrainer, évaluer et interpréter les modèles
 
@@ -79,29 +83,20 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 
 from fbprophet import Prophet  # un package de series temporelles mis a disposition par facebook
-import urllib3  # scrapper le web
 import shutil  # move ou copier fichier
 import zipfile  # compresser ou décompresser fichier
 
-# Pour visualisation sur une carte utilsons la librairie bokeh qui fait appel a une api GoogleMaps
-from bokeh.palettes import inferno
-from bokeh.io import show, output_notebook
-from bokeh.models import (
-  GMapPlot, GMapOptions, ColumnDataSource, Circle, Range1d, PanTool, WheelZoomTool, BoxSelectTool, ColorBar, LogTicker,
-    LabelSet, Label,HoverTool
-)
-from collections import OrderedDict
 import seaborn as sns
-from bokeh.models.mappers import LogColorMapper
 
 # %matplotlib inline
+
+# %autosave 0
 # -
 
 # # Configuration
 # Choix du répertoire de travail "data_folder" dans lequel tous les fichiers csv seront entreposés
 
-data_folder = os.path.join(os.getcwd(),"data")
-# %autosave 0
+data_folder = os.path.join(os.getcwd(), "data")
 
 
 # Petite vérification
@@ -117,22 +112,24 @@ for file in os.listdir(data_folder):
 # - Yconso.csv
 # - Xinput.csv
 
-# +
-Yconso = pd.read_csv("data/Yconso.csv")
+Yconso_csv = os.path.join(data_folder, "Yconso.csv")
+Yconso = pd.read_csv(Yconso_csv)
+
+
+# La colonne "ds" contient des objets de type string. On va la convertir en objets de type "datetime" plus approprié.  
+# Pour plus d'information, voir le TP1_Preparation_donnees.
 
 Yconso['ds'] = pd.to_datetime(Yconso['ds'])
 
 print(Yconso.head(5))
 print(Yconso.shape)
 
-
-# +
-Xinput = pd.read_csv("data/Xinput.csv")
+Xconso_csv = os.path.join(data_folder, "Xconso.csv")
+Xinput = pd.read_csv(Xconso_csv)
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
 
 print(Xinput.head(5))
 print(Xinput.shape)
-# -
 
 # # Visualisation des données 
 #
@@ -153,6 +150,7 @@ print(Xinput.shape)
 
 Yconso['y'].describe()
 
+
 # ## Visualiser la consommation d'un jour particulier
 # On souhaite visualiser la consommation réalisée pour un jour donné de l'historique.
 
@@ -164,7 +162,9 @@ def plot_load(var_load, year, month, day):
     plt.plot(consoJour['ds'], consoJour['y'], color='blue')
     plt.show()
 
+
 plot_load(Yconso, 2016, 12, 20)
+
 
 # ## Afficher une semaine arbitraire de consommation
 # On pourra modifier la fonction précédente en rajoutant le timedelta en paramètre.
@@ -177,6 +177,7 @@ def plot_load_timedelta(var_load, year, month, day, delta_days):
                                       & (var_load.ds <= date_lendemain_cible)]
     plt.plot(conso_periode['ds'], conso_periode['y'], color='blue')
     plt.show()
+
 
 plot_load_timedelta(Yconso, 2016, 12, 20, delta_days=7)
 
@@ -241,12 +242,14 @@ Xinput['lag1W'] = Yconso['y'].shift(24*7)
 
 Xinput.head(24 * 7 + 1)
 
+
 # On regarde maintenant graphiquement si on a une belle corrélation ou non :
 
 def plot_scatter_load(var_x):
     plt.scatter(Xinput[var_x],Yconso['y'])
     plt.title(var_x)
     plt.show()
+
 
 plot_scatter_load('lag1H')
 plot_scatter_load('lag1D')
@@ -339,6 +342,8 @@ y_pred = float(Yconso.loc[Yconso['ds'] == datetime_la_veille]['y']) + delta_MW_b
 pred_error = abs(y_true - y_pred)
 
 print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred, y_true, pred_error/y_true * 100))
+
+
 # -
 
 # Bon... Bien essayé mais maintenant on va être plus sérieux !
@@ -365,6 +370,7 @@ def prepareDataSetEntrainementTest(Xinput, Yconso, dateDebut, dateRupture, nbJou
     
     return XinputTrain, XinputTest, YconsoTrain, YconsoTest
 
+
 # +
 # on souhaite un jeu de test qui commence à partir du 1er mai 2017
 dateDebut = datetime.datetime(year=2013, month=1, day=7)#pour éviter les NaN dans le jeu de données
@@ -388,6 +394,7 @@ print('la taille de l échantillon YconsoTrain est:' + str(YconsoTrain.shape))
 print('la taille de l échantillon YconsoTest est:' + str(YconsoTest.shape))
 print("la proportion de data d'entrainement est de:" + str(YconsoTrain.shape[0] / (YconsoTrain.shape[0] + YconsoTest.shape[0])))
 
+
 # # Fonctions utilitaires
 
 # Créons la fonction modelError qui va calculer pour un échantillon (Y, Y_hat) différents scores :
@@ -406,6 +413,7 @@ def modelError(Y, Yhat):
     rmse = np.sqrt(mean_squared_error(Y['y'], Yhat))
    
     return relativeErrorsTest, errorMean, errorMax, rmse
+
 
 def evaluation(YTrain, YTest, YTrainHat, YTestHat):
     # Ytrain et Ytest ont deux colonnes : ds et y
@@ -442,6 +450,7 @@ def evaluation_par(X, Y, Yhat,avecJF=True):
         statsJF=None
     
     return statsWD,statsHour,statsJF
+
 
 Xinput.head()
 
@@ -706,7 +715,5 @@ evaluation(YconsoTrain, YconsoTest, forecastTrainNaif2, forecastTestNaif2)
 # - etudiez les incertitudes et les possibilités offertes par PyStan
 #
 # Mettez-vous en 3 groupes, explorez pendant 30 minutes, et restituez.
-
-
 
 
