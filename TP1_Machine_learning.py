@@ -124,11 +124,11 @@ Yconso['ds'] = pd.to_datetime(Yconso['ds'])
 print(Yconso.head(5))
 print(Yconso.shape)
 
-Xconso_csv = os.path.join(data_folder, "Xconso.csv")
+Xconso_csv = os.path.join(data_folder, "Xinput.csv")
 Xinput = pd.read_csv(Xconso_csv)
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
 
-print(Xinput.head(5))
+print(Xinput.head(35))
 print(Xinput.shape)
 
 # # Visualisation des données 
@@ -675,8 +675,8 @@ print(str(round(evalJF*100,1)))
 
 # ## Et nos modèles naifs au fait?
 
-forecastTestNaif1=np.array(XinputTest['lag1D'])
-forecastTrainNaif1=np.array(XinputTrain['lag1D'])
+forecastTestNaif1 = np.array(XinputTest['lag1D'])
+forecastTrainNaif1 = np.array(XinputTrain['lag1D'])
 evaluation(YconsoTrain, YconsoTest, forecastTrainNaif1, forecastTestNaif1)
 
 # +
