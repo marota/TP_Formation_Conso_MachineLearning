@@ -264,7 +264,7 @@ plot_scatter_load('lag1W')
 
 # +
 #matrix_correlation = meteo_obs_df.corr() #calcul d'une corrélation globale
-cols = list(Xinput.columns[Xinput.columns.str.endswith("Th+24")])
+cols = list(Xinput.columns[Xinput.columns.str.endswith("Th_prev")])
 #calcul de la corrélation en fonction de la saison
 
 Xinput['saison'] = ((Xinput['ds'].dt.month ==1) |(Xinput['ds'].dt.month==2)|(Xinput['ds'].dt.month==12)).astype(int)*1+((Xinput['ds'].dt.month ==3 )|(Xinput['ds'].dt.month==4)|(Xinput['ds'].dt.month==5)).astype(int)*2+((Xinput['ds'].dt.month ==6 )|(Xinput['ds'].dt.month==7)|(Xinput['ds'].dt.month==8)).astype(int)*3+((Xinput['ds'].dt.month ==9) |(Xinput['ds'].dt.month==10)|(Xinput['ds'].dt.month==11)).astype(int)*4  # conversion bool => int
@@ -290,7 +290,7 @@ plt.show()
 # NB : Paris Montsouris est la station météo n°156
 #
 
-plt.scatter(Xinput['X156Th+24'], Yconso['y'], alpha=0.2)
+plt.scatter(Xinput['X156Th_prev'], Yconso['y'], alpha=0.2)
 plt.show()
 
 # ### Question
@@ -348,8 +348,8 @@ delta_MW_par_degre = 2400  # par expertise,
 # On commence par juste notre point horaire préféré
 
 # +
-temperature_Montsouris_veille = float(Xinput.loc[Xinput['ds'] == datetime_la_veille]['X156Th+24'])
-temperature_Montsouris_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['X156Th+24'])
+temperature_Montsouris_veille = float(Xinput.loc[Xinput['ds'] == datetime_la_veille]['X156Th_prev'])
+temperature_Montsouris_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['X156Th_prev'])
 delta_temp = temperature_Montsouris_cible - temperature_Montsouris_veille
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
@@ -363,7 +363,7 @@ print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred, y_true, p
 
 # +
 y_pred = Yconso.shift(24)
-delta
+# TODO Rémy
 
 pred_error = (np.abs(Yconso["y"].loc[24:] - y_veille["y"].loc[24:]) / Yconso["y"].loc[24:] * 100)
 
@@ -609,7 +609,7 @@ print(Xinput.shape)
 print(Xinput.columns)
 
 # Récupération des prévisions météo à J+1 pour la veille
-colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th+24' in s]
+colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
 lag_colsToKeepWeather = [ s + "_J_1" for s in colsToKeepWeather ]
 Xinput[lag_colsToKeepWeather] = Xinput[colsToKeepWeather].shift(24)
 time = pd.to_datetime(Xinput['ds'], yearfirst=True)
@@ -645,7 +645,7 @@ from sklearn.ensemble import RandomForestRegressor
 # ### Préparation des données d'entrée
 
 # +
-colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th+24' in s]
+colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
 colsToKeepMonth = [v for v in Xinput.columns.get_values() if 'month' in v]
 colsToKeepWeekday = [v for v in Xinput.columns.get_values() if 'weekday' in v]
 colsToKeepHour = [v for v in Xinput.columns.get_values() if 'hour' in v]
@@ -699,30 +699,6 @@ evalWD,evalHour,evalJF = evaluation_par(XinputTest,YconsoTest,forecastTestXGB)
 print(str(round(evalWD*100,1)))
 print(str(round(evalHour*100,1)))
 print(str(round(evalJF*100,1)))
-
-# ## Et nos modèles naifs au fait?
-
-forecastTestNaif1 = np.array(XinputTest['lag1D'])
-forecastTrainNaif1 = np.array(XinputTrain['lag1D'])
-evaluation(YconsoTrain, YconsoTest, forecastTrainNaif1, forecastTestNaif1)
-
-# +
-temperature_Montsouris_veille = XinputTrain['X156Th+24_J_1']
-temperature_Montsouris_cible = XinputTrain['X156Th+24']
-delta_temp = temperature_Montsouris_cible - temperature_Montsouris_veille
-
-delta_MW_because_temp_train = delta_temp * delta_MW_par_degre * ((temperature_Montsouris_cible<15)*1)
-
-temperature_Montsouris_veille = XinputTest['X156Th+24_J_1']
-temperature_Montsouris_cible = XinputTest['X156Th+24']
-delta_temp = temperature_Montsouris_cible - temperature_Montsouris_veille
-
-delta_MW_because_temp_test = delta_temp * delta_MW_par_degre * ((temperature_Montsouris_cible<15)*1)
-
-forecastTestNaif2=np.array(XinputTest['lag1D'] + delta_MW_because_temp_test)
-forecastTrainNaif2=np.array(XinputTrain['lag1D']+ delta_MW_because_temp_train)
-evaluation(YconsoTrain, YconsoTest, forecastTrainNaif2, forecastTestNaif2)
-# -
 
 # ### Question
 # - Selon vous, pourquoi l'erreur max est significative pour tous les modèles ?
