@@ -301,14 +301,16 @@ plt.show()
 # <img src="pictures/hommeNaif.png" width=500 height=60>
 
 # +
+# Pour se faire les dents on va considérer juste un point horaire
 datetime_a_predire = datetime.datetime.strptime("2016-12-20_14:00", "%Y-%m-%d_%H:%M")
-
 y_true = float(Yconso.loc[Yconso['ds'] == datetime_a_predire]['y'])
 
 print("On veut predire la consommation du {}, soit {}".format(datetime_a_predire, y_true))
 # -
 
 # ## Première idée, un modèle naïf : pour l'heure qui nous intéresse, on plaque bêtement la valeur de consommation nationale de la veille
+
+# On commence par juste notre point horaire
 
 # +
 datetime_la_veille = datetime_a_predire - datetime.timedelta(days=1)
@@ -318,6 +320,19 @@ pred_error = abs(y_true - y_pred)
 print("Modele 1 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred, y_true, pred_error/y_true * 100))
 # -
 
+# Voyons maintenant ce que ça donne non plus sur un unique point horaire mais sur l'ensemble des points horaires :
+
+# +
+y_pred = Yconso.shift(24)
+
+# On ignore les 24 premières heures à cause des NaN suite au shift
+pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred["y"].loc[24:]) / Yconso["y"].loc[24:] * 100)
+
+print(np.mean(pred_error))
+# -
+
+# Bon c'est pas fou...
+
 # ## Deuxième idée avec de l'expertise : pareil, avec comme raffinement le fait que l'on considere maintenant l'influence de la temperature
 #
 # <img src="pictures/ExpertJamy.jpg" width=500 height=60>
@@ -326,22 +341,34 @@ delta_MW_par_degre = 2400  # par expertise,
                            # on considere qu'une augmentation moyenne de 1°C 
                            # conduit à une augmentation de 2400MW de la conso nationale
 
-# +
-# Pour faire simple, on va prétendre que ce qui se passe à Paris 
-# est représentatif de ce qu'il se passe en France comme delta de température
-# Paris-Montsouris est la station numéro 156
+# Pour faire simple, on va prétendre que ce qui se passe à Paris est représentatif de ce qu'il se passe en France comme delta de température. Paris-Montsouris est la station numéro 156.
+#
+# On va aussi pour l'exercice faire comme si nous avions accès à des prévisions météos parfaite. Aussi, on triche en utilisant la météo réalisée du jour à prédire :-)
 
+# On commence par juste notre point horaire préféré
+
+# +
 temperature_Montsouris_veille = float(Xinput.loc[Xinput['ds'] == datetime_la_veille]['X156Th+24'])
 temperature_Montsouris_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['X156Th+24'])
 delta_temp = temperature_Montsouris_cible - temperature_Montsouris_veille
-
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
-# +
 y_pred = float(Yconso.loc[Yconso['ds'] == datetime_la_veille]['y']) + delta_MW_because_temp
 pred_error = abs(y_true - y_pred)
 
 print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred, y_true, pred_error/y_true * 100))
+# -
+
+# Et maintenant sur l'ensemble des points horaires :
+
+# +
+y_pred = Yconso.shift(24)
+delta
+
+pred_error = (np.abs(Yconso["y"].loc[24:] - y_veille["y"].loc[24:]) / Yconso["y"].loc[24:] * 100)
+
+#print(np.mean(pred_error))
+print(delta_MW_because_temp)
 
 
 # -

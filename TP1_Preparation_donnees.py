@@ -187,6 +187,10 @@ print("maintenant, la colonne ds est de type " + str(type(jours_feries_df.ds[0])
 
 jours_feries_df.head(8)
 
+# Cette dataframe fait correspondre le timestamp "2012-12-25" avec "Noël". Cependant, le timestamp "2012-12-25" correspond implicitemlent au timestamp "2012-12-25 00:00", ce qui fait que pour l'instant les timestamp "2012-12-25 00:05" ou "2012-12-25 03:00" ne sont pas identifiés comme étant aussi Noël, ce qui va poser problème plus tard.
+#
+# La cellule ci-dessous va étendre la dataframe des jours fériés de sorte à résoudre ce problème.
+
 # +
 timestamps_of_interest = conso_df[['ds']]
 timestamps_of_interest["day"] = timestamps_of_interest["ds"].apply(lambda x: datetime.datetime.strftime(x, format="%Y-%m-%d"))
@@ -272,9 +276,9 @@ meteo_horaire_df = meteo_horaire_df.reset_index(drop=True)
 # -
 
 
-# Pour se mettre dans le cadre d'un exercice de prévision, et toujours dans l'idée de réduire la taille du problème, on ne va conserver que les températures prévues à 24h (noms de colonnes finissant par 'Th+24'), ainsi que la colonne _ds_.
+# Pour se mettre dans le cadre d'un exercice de prévision, et toujours dans l'idée de réduire la taille du problème, on ne va conserver que les températures réalisées, les températures prévues à 24h (noms de colonnes finissant par 'Th+24'), ainsi que la colonne _ds_.
 
-colonnes_a_garder = ['ds'] + list(meteo_horaire_df.columns[meteo_horaire_df.columns.str.endswith("Th+24")])
+colonnes_a_garder = ['ds'] + list(meteo_horaire_df.columns[meteo_horaire_df.columns.str.endswith("Th+0")]) + list(meteo_horaire_df.columns[meteo_horaire_df.columns.str.endswith("Th+24")])
 meteo_prev_df = meteo_horaire_df[colonnes_a_garder]
 
 print(meteo_prev_df.head(5))
@@ -311,7 +315,7 @@ data = dict(lat=stations_meteo_df['latitude'],
 
 source = ColumnDataSource(data)
 
-# l'échelle de couleur pour la température
+# l'échelle 
 Tlow = 0
 Thigh = 20
 color_mapper = LogColorMapper(palette="Viridis256", low=Tlow, high=Thigh)
@@ -443,16 +447,41 @@ print(merged_df.columns)
 #
 # La température France est une moyenne pondérée de la température de 32 stations. On a donc besoin des poids de stations_meteo_df.
 
+merged_df['FranceTh+0'] = np.dot(merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+0")])], stations_meteo_df['Poids'])
 merged_df['FranceTh+24'] = np.dot(merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+24")])], stations_meteo_df['Poids'])
 
 
 print(merged_df.shape)
 print(merged_df.columns)
 
-# ### Cohérence temporelle des données
-#
-# Pour avoir la prévision de température à 24h pour l'observation t, il faut décaler les données de température de 24 pas de temps !
+# ### Cohérence temporelle des données pour notre modèle de prédiction
 
+# Prenons quelques instants pour regarder les données que l'on a pour l'instant :
+
+merged_df
+
+# Pour chaque point horaire, on a :
+# * la consommation réalisée (au niveau national
+# * la température réalisée pour chaque station météo, ainsi qu'une valeur représentative de la température moyenne à l'échelle nationale
+# * une prévision de température pour 24 heures plus tard pour chaque station météo, ainsi qu'une prévision de la température moyenne France pour dans 24 heures
+# * l'information si le point horaire appartient à un jour férié ou non    
+
+# Ce que l'on veut faire, c'est mettre au point un modèle qui prédit comme Y :
+# * la consommation nationale pour point_horaire_cible
+# prenant en entrée un X qui comporte tout ou partie de :
+# * l'information si point_horaire_cible appartient à un jour férié
+# * La prévision météo pour point_horaire_cible, prévision établie 24h à l'avance
+# * La consommation réalisée 24h avant point_horaire_cible
+# * La température réalisée 24h avant point_horaire_cible
+# Il faut simplement être vigilant sur le fait qu'il est interdit de prédire une consommation pour point horaire cible en ayant comme entrée la température réalisée pour point horaire cible (on n'est pas dans minority report)
+#
+# Ainsi, on va adapter _merged_df_ de sorte à ce que chaque ligne correspondent à un point horaire cible à prédire, avec en colonne :
+# * le Y (la consommation nationale pour point_horaire_cible)
+# * Le X (cf. ci-dessus)
+#
+# Ainsi, on va devoir décaler toutes les données de températures de 24 heures
+
+merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+0")])] = merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+0")])].shift(24)
 merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+24")])] = merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+24")])].shift(24)
 
 # ## Sauvegarde du fichier 
@@ -470,5 +499,7 @@ X_input = merged_df.drop(['Consommation.NAT.t0'], axis=1)
 
 y_conso.to_csv("data/Yconso.csv", index = False)
 X_input.to_csv("data/Xinput.csv", index = False)
+
+
 
 
