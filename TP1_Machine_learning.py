@@ -54,17 +54,19 @@
 # ## To be continued
 # Le deuxième TP permettra d'investiguer les modèles "Deep" avec réseaux de neurones, en montrant le moindre besoin en feature engineering et leur plus grande capacité a absorber l'information de par les représentations hiérarchiques qu'ils se créent.
 
-# # Dimensionnement en temps
+# ## Dimensionnement en temps
 # On prévoit un une durée d'environ 2h pour ce TP1, debrief inclus :
 # - 20-30 minutes pour charger et préparer les données [FACULTATIF]
 # - 30-40 minutes pour analyser et visualiser les données
 # - 45-60 minutes pour créer, entrainer, évaluer et interpréter les modèles
 
-# # Se familiariser avec le problème: Eco2mix
+# ## Se familiariser avec le problème: Eco2mix
 # Quand on parle de courbe de consommation France, il y a une application incontournable : eco2mix !
 # Allons voir à quoi ressemblent ces courbes de consommation, pour nous faire une idée du problème et se donner quelques intuitions:
 # http://www.rte-france.com/fr/eco2mix/eco2mix
 # ou sur application mobile
+
+# # On passe au code : import de librairies et configuration
 
 # ## Chargement des Librairies
 
@@ -93,7 +95,7 @@ import seaborn as sns
 # %autosave 0
 # -
 
-# # Configuration
+# ## Configuration
 # Choix du répertoire de travail "data_folder" dans lequel tous les fichiers csv seront entreposés
 
 data_folder = os.path.join(os.getcwd(), "data")
@@ -130,6 +132,7 @@ Xinput['ds'] = pd.to_datetime(Xinput['ds'])
 
 print(Xinput.head(35))
 print(Xinput.shape)
+print(Xinput.columns)
 
 # # Visualisation des données 
 #
@@ -303,9 +306,9 @@ plt.show()
 # +
 # Pour se faire les dents on va considérer juste un point horaire
 datetime_a_predire = datetime.datetime.strptime("2016-12-20_14:00", "%Y-%m-%d_%H:%M")
-y_true = float(Yconso.loc[Yconso['ds'] == datetime_a_predire]['y'])
+y_true_point_horaire_cible = float(Yconso.loc[Yconso['ds'] == datetime_a_predire]['y'])
 
-print("On veut predire la consommation du {}, soit {}".format(datetime_a_predire, y_true))
+print("On veut predire la consommation du {}, soit {}".format(datetime_a_predire, y_true_point_horaire_cible))
 # -
 
 # ## Première idée, un modèle naïf : pour l'heure qui nous intéresse, on plaque bêtement la valeur de consommation nationale de la veille
@@ -313,20 +316,19 @@ print("On veut predire la consommation du {}, soit {}".format(datetime_a_predire
 # On commence par juste notre point horaire
 
 # +
-datetime_la_veille = datetime_a_predire - datetime.timedelta(days=1)
-y_pred = float(Yconso.loc[Yconso['ds'] == datetime_la_veille]['y'])
-pred_error = abs(y_true - y_pred)
+y_pred_modele_naif_1 = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['lag1D'])
+pred_error = abs(y_true - y_pred_modele_naif_1)
 
-print("Modele 1 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred, y_true, pred_error/y_true * 100))
+print("Modele 1 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_naif_1, y_true, pred_error/y_true_point_horaire_cible * 100))
 # -
 
 # Voyons maintenant ce que ça donne non plus sur un unique point horaire mais sur l'ensemble des points horaires :
 
 # +
-y_pred = Yconso.shift(24)
+y_pred_modele_naif_1 = Xinput["lag1D"]
 
-# On ignore les 24 premières heures à cause des NaN suite au shift
-pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred["y"].loc[24:]) / Yconso["y"].loc[24:] * 100)
+# On ignore les 24 premières heures à cause des NaN suite du début
+pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred_modele_naif_1.loc[24:]) / Yconso["y"].loc[24:] * 100)
 
 print(np.mean(pred_error))
 # -
@@ -341,39 +343,40 @@ delta_MW_par_degre = 2400  # par expertise,
                            # on considere qu'une augmentation moyenne de 1°C 
                            # conduit à une augmentation de 2400MW de la conso nationale
 
-# Pour faire simple, on va prétendre que ce qui se passe à Paris est représentatif de ce qu'il se passe en France comme delta de température. Paris-Montsouris est la station numéro 156.
-#
-# On va aussi pour l'exercice faire comme si nous avions accès à des prévisions météos parfaite. Aussi, on triche en utilisant la météo réalisée du jour à prédire :-)
-
 # On commence par juste notre point horaire préféré
 
 # +
-temperature_Montsouris_veille = float(Xinput.loc[Xinput['ds'] == datetime_la_veille]['X156Th_prev'])
-temperature_Montsouris_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['X156Th_prev'])
-delta_temp = temperature_Montsouris_cible - temperature_Montsouris_veille
+temperature_real_veille = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['FranceTh_real_24h_avant'])
+temperature_prevu_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['FranceTh_prev'])
+delta_temp = temperature_prevu_cible - temperature_real_veille
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
-y_pred = float(Yconso.loc[Yconso['ds'] == datetime_la_veille]['y']) + delta_MW_because_temp
-pred_error = abs(y_true - y_pred)
+y_pred_modele_naif_2 = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['lag1D']) + delta_MW_because_temp
+pred_error = abs(y_true_point_horaire_cible - y_pred_modele_naif_2)
 
-print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred, y_true, pred_error/y_true * 100))
+print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_naif_2, y_true_point_horaire_cible, pred_error/y_true_point_horaire_cible * 100))
 # -
 
 # Et maintenant sur l'ensemble des points horaires :
 
 # +
-y_pred = Yconso.shift(24)
-# TODO Rémy
+y_pred = Xinput["lag1D"]
 
-pred_error = (np.abs(Yconso["y"].loc[24:] - y_veille["y"].loc[24:]) / Yconso["y"].loc[24:] * 100)
+delta_temp = Xinput['FranceTh_prev'] - Xinput['FranceTh_real_24h_avant']
+delta_MW_because_temp = delta_temp * delta_MW_par_degre
+print(delta_MW_because_temp[24:])
 
-#print(np.mean(pred_error))
-print(delta_MW_because_temp)
+y_pred_modele_naif_2 = Xinput["lag1D"] + delta_MW_because_temp
+pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred_modele_naif_2.loc[24:]) / Yconso["y"].loc[24:] * 100)
+
+print(np.mean(pred_error))
 
 
 # -
 
-# Bon... Bien essayé mais maintenant on va être plus sérieux !
+# Bon... En fait l'hypothèse comme quoi la consommation augmente de 2400 MW quand on perd 1°C ne tient que quand les températures sont basses, et non quand elles sont douces. D'ailleurs en période de canicule, à cause des climatiseurs, une augmentation de la température peut entrainer une augmentation de la consommation.
+#
+# Bien essayé avec ces modèles naïfs, mais maintenant on va être plus sérieux !
 
 # # Préparer un jeu d'entrainement et un jeu de test
 # En machine learning, il y a 2 types d'erreur que l'on peut calculer : l'erreur d'entrainement et l'erreur de test. 
@@ -470,13 +473,13 @@ def evaluation_par(X, Y, Yhat,avecJF=True):
     statsHour = groupedHour.aggregate([np.mean])
     
     if(avecJF):
-        dataJF=Y[['JoursFeries','APE']]
+        dataJF = Y[['JoursFeries','APE']]
         groupedJF = dataJF.groupby(['JoursFeries'], as_index=True)
         statsJF = groupedJF.aggregate([np.mean])
     else:
-        statsJF=None
+        statsJF = None
     
-    return statsWD,statsHour,statsJF
+    return statsWD, statsHour, statsJF
 
 
 Xinput.head()
