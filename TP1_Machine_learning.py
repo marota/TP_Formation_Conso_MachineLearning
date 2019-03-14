@@ -317,9 +317,9 @@ print("On veut predire la consommation du {}, soit {}".format(datetime_a_predire
 
 # +
 y_pred_modele_naif_1 = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['lag1D'])
-pred_error = abs(y_true - y_pred_modele_naif_1)
+pred_error = abs(y_true_point_horaire_cible - y_pred_modele_naif_1)
 
-print("Modele 1 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_naif_1, y_true, pred_error/y_true_point_horaire_cible * 100))
+print("Modele 1 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_naif_1, y_true_point_horaire_cible, pred_error/y_true_point_horaire_cible * 100))
 # -
 
 # Voyons maintenant ce que ça donne non plus sur un unique point horaire mais sur l'ensemble des points horaires :
@@ -364,7 +364,6 @@ y_pred = Xinput["lag1D"]
 
 delta_temp = Xinput['FranceTh_prev'] - Xinput['FranceTh_real_24h_avant']
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
-print(delta_MW_because_temp[24:])
 
 y_pred_modele_naif_2 = Xinput["lag1D"] + delta_MW_because_temp
 pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred_modele_naif_2.loc[24:]) / Yconso["y"].loc[24:] * 100)
