@@ -134,14 +134,14 @@ print(Yconso.shape)
 
 Xinput_zip = os.path.join(data_folder, "Xinput.zip")
 
-password = None
+password = 'FIFA_Meteo'
 
 
 # +
 # Pour travailler avec les fichiers zip, on utilise la bibliothèque **zipfile**.
 zipfile_xinput = zipfile.ZipFile(Xinput_zip)
 zipfile_xinput.setpassword(bytes(password,'utf-8'))
-Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=";",engine='c',header=0)
+Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=",",engine='c',header=0)
 
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
 # -
