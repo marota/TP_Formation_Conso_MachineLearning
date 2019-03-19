@@ -89,6 +89,7 @@ from math import sqrt
 from fbprophet import Prophet  # un package de series temporelles mis a disposition par facebook
 import shutil  # move ou copier fichier
 import zipfile  # compresser ou décompresser fichier
+import urllib3 # téléchargement de fichier
 
 import seaborn as sns
 
@@ -128,9 +129,26 @@ Yconso['ds'] = pd.to_datetime(Yconso['ds'])
 print(Yconso.head(5))
 print(Yconso.shape)
 
+# **Attention : Les données Xinput sont encryptées dans un fichier zip. du fait de données météo**  
+# Pour les lire vous avez besoin d'un mot de passe qui ne peut vous être donné que dans le cadre d'un travail au sein de RTE.
+
+Xinput_zip = os.path.join(data_folder, "Xinput.zip")
+
+password = None
+
+
+# +
+# Pour travailler avec les fichiers zip, on utilise la bibliothèque **zipfile**.
+zipfile_xinput = zipfile.ZipFile(Xinput_zip)
+zipfile_xinput.setpassword(bytes(password,'utf-8'))
+Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=";",engine='c',header=0)
+
+Xinput['ds'] = pd.to_datetime(Xinput['ds'])
+# -
+
 Xconso_csv = os.path.join(data_folder, "Xinput.csv")
 Xinput = pd.read_csv(Xconso_csv)
-Xinput['ds'] = pd.to_datetime(Xinput['ds'])
+
 
 print(Xinput.head(35))
 print(Xinput.shape)
