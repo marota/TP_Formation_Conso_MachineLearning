@@ -146,10 +146,6 @@ Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=",",engine='c',header
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
 # -
 
-Xconso_csv = os.path.join(data_folder, "Xinput.csv")
-Xinput = pd.read_csv(Xconso_csv)
-
-
 print(Xinput.head(35))
 print(Xinput.shape)
 print(Xinput.columns)
