@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 1.0.0
+#       jupytext_version: 1.0.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -245,8 +245,8 @@ print(nb_stations)
 
 meteo_zip = os.path.join(data_folder, "meteoX_T0_T24.zip")
 
-#password = None
-password = "FIFA_Meteo"
+password = None
+
 
 # +
 # Cette étape peut être un peu longue car le fichier est volumineux
@@ -499,6 +499,10 @@ X_input = merged_df.drop(['Consommation.NAT.t0'], axis=1)
 
 y_conso.to_csv("data/Yconso.csv", index = False)
 X_input.to_csv("data/Xinput.csv", index = False)
+
+
+
+
 
 
 

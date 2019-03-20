@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 1.0.0
+#       jupytext_version: 1.0.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -19,6 +19,8 @@
 # Pour garantir l'équilibre offre-demande à chaque instant, RTE construit ses propres prévisions de la consommation nationale, régionale, et locale. 
 #
 # Nous nous concentrons ici sur la prévision nationale. Un challenge lancé par RTE (https://dataanalyticspost.com/wp-content/uploads/2017/06/Challenge-RTE-Prevision-de-Consommation.pdf) a permis de tester des approches alternatives aux modèles internes (POPCORN, PREMIS).
+#
+# <img src="pictures/ChallengeConso.png" width=1000 height=100>
 #
 # Comme dans ce challenge, nous voulons aider RTE a faire de meilleures prévisions de conso ! 
 
@@ -87,6 +89,7 @@ from math import sqrt
 from fbprophet import Prophet  # un package de series temporelles mis a disposition par facebook
 import shutil  # move ou copier fichier
 import zipfile  # compresser ou décompresser fichier
+import urllib3 # téléchargement de fichier
 
 import seaborn as sns
 
@@ -126,9 +129,22 @@ Yconso['ds'] = pd.to_datetime(Yconso['ds'])
 print(Yconso.head(5))
 print(Yconso.shape)
 
-Xconso_csv = os.path.join(data_folder, "Xinput.csv")
-Xinput = pd.read_csv(Xconso_csv)
+# **Attention : Les données Xinput sont encryptées dans un fichier zip. du fait de données météo**  
+# Pour les lire vous avez besoin d'un mot de passe qui ne peut vous être donné que dans le cadre d'un travail au sein de RTE.
+
+Xinput_zip = os.path.join(data_folder, "Xinput.zip")
+
+password = None
+
+
+# +
+# Pour travailler avec les fichiers zip, on utilise la bibliothèque **zipfile**.
+zipfile_xinput = zipfile.ZipFile(Xinput_zip)
+zipfile_xinput.setpassword(bytes(password,'utf-8'))
+Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=",",engine='c',header=0)
+
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
+# -
 
 print(Xinput.head(35))
 print(Xinput.shape)
