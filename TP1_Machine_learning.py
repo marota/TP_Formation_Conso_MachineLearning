@@ -134,7 +134,7 @@ print(Yconso.shape)
 
 Xinput_zip = os.path.join(data_folder, "Xinput.zip")
 
-password = 'FIFA_Meteo'
+password = None
 
 
 # +
