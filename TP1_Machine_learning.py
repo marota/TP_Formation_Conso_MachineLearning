@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 1.0.1
+#       jupytext_version: 1.0.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -355,16 +355,21 @@ print(np.mean(pred_error))
 #
 # <img src="pictures/ExpertJamy.jpg" width=500 height=60>
 
-delta_MW_par_degre = 2400  # par expertise, 
+# +
+delta_MW_par_degre = 2300  # par expertise, 
                            # on considere qu'une augmentation moyenne de 1°C 
-                           # conduit à une augmentation de 2400MW de la conso nationale
+                           # conduit à une augmentation de 2300MW de la conso nationale
+                           # Si on est en dessous de 15°C
+            
+threshold_temperature = 15
+# -
 
 # On commence par juste notre point horaire préféré
 
 # +
 temperature_real_veille = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['FranceTh_real_24h_avant'])
 temperature_prevu_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['FranceTh_prev'])
-delta_temp = temperature_prevu_cible - temperature_real_veille
+delta_temp = min(threshold_temperature, temperature_prevu_cible) - min(threshold_temperature, temperature_real_veille)
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
 y_pred_modele_naif_2 = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['lag1D']) + delta_MW_because_temp
@@ -378,7 +383,10 @@ print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_nai
 # +
 y_pred = Xinput["lag1D"]
 
-delta_temp = Xinput['FranceTh_prev'] - Xinput['FranceTh_real_24h_avant']
+temp_prev_with_threshold = np.minimum([threshold_temperature], Xinput['FranceTh_prev'].values)
+temp_actual_with_threshold = np.minimum([threshold_temperature], Xinput['FranceTh_real_24h_avant'].values)
+
+delta_temp = temp_prev_with_threshold - temp_actual_with_threshold
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
 y_pred_modele_naif_2 = Xinput["lag1D"] + delta_MW_because_temp
@@ -389,9 +397,7 @@ print(np.mean(pred_error))
 
 # -
 
-# Bon... En fait l'hypothèse comme quoi la consommation augmente de 2400 MW quand on perd 1°C ne tient que quand les températures sont basses, et non quand elles sont douces. D'ailleurs en période de canicule, à cause des climatiseurs, une augmentation de la température peut entrainer une augmentation de la consommation.
-#
-# Bien essayé avec ces modèles naïfs, mais maintenant on va être plus sérieux !
+# Bon... Bien essayé avec ces modèles naïfs, mais maintenant on va être plus sérieux !
 
 # # Préparer un jeu d'entrainement et un jeu de test
 # En machine learning, il y a 2 types d'erreur que l'on peut calculer : l'erreur d'entrainement et l'erreur de test. 
