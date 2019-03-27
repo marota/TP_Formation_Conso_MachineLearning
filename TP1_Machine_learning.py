@@ -91,6 +91,15 @@ import shutil  # move ou copier fichier
 import zipfile  # compresser ou décompresser fichier
 import urllib3 # téléchargement de fichier
 
+from bokeh.palettes import inferno
+from bokeh.io import show, output_notebook
+from bokeh.models import (
+  GMapPlot, GMapOptions, ColumnDataSource, Circle, Range1d, PanTool, WheelZoomTool, BoxSelectTool, ColorBar, LogTicker,
+    LabelSet, Label,HoverTool
+)
+from bokeh.models.mappers import LogColorMapper
+from collections import OrderedDict
+
 import seaborn as sns
 
 # %matplotlib inline
@@ -279,6 +288,66 @@ plot_scatter_load('lag1W')
 
 # ## Visualisation des stations météo
 
+# Chargez les données de StationsMeteoRTE.csv vers stations_meteo_df
+stations_meteo_csv = os.path.join(data_folder, "StationsMeteoRTE.csv")
+stations_meteo_df = pd.read_csv(stations_meteo_csv, sep=";")
+
+stations_meteo_df.head(5)
+
+# +
+map_options = GMapOptions(lat=47.08, lng=2.39, map_type="roadmap", zoom=5)
+
+plot = GMapPlot(x_range=Range1d(), y_range=Range1d(), map_options=map_options)
+plot.title.text = "France"
+
+# For GMaps to function, Google requires you obtain and enable an API key:
+#
+#     https://developers.google.com/maps/documentation/javascript/get-api-key
+#
+# Replace the value below with your personal API key:
+plot.api_key = "AIzaSyC05Bs_e0q6KWyVHlmy0ymHMKMknyMbCm0"
+
+# nos données d'intérêt pour créer notre visualisation
+data = dict(lat=stations_meteo_df['latitude'],
+            lon=stations_meteo_df['longitude'],
+            label=stations_meteo_df['Nom'],
+           )
+
+source = ColumnDataSource(data)
+
+# la couleur de remplissage des cercles est fonction de la valeur de la temérature
+circle = Circle(x="lon", y="lat", 
+                size=15, 
+                fill_color="green",
+                fill_alpha=0.8, 
+                line_color=None,)
+
+# les labels que l'on souhaite afficher en passant un curseur sur une station
+labels = LabelSet(x='lon', y='lat', text='label', level='glyph', x_offset=5, y_offset=5,
+                  source=source, render_mode='canvas')
+
+# on ajoute la layer
+plot.add_glyph(source, circle)
+
+# le tooltip quand on pose le curseur dessus
+hover = HoverTool(tooltips= OrderedDict([
+    ("index", "$index"),
+    ("(xx,yy)", "(@lon, @lat)"),
+    ("label", "@label")
+]))
+
+# on plot
+plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool(), hover)
+
+
+color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(),
+                 label_standoff=12, border_line_color=None, location=(0,0))
+plot.add_layout(color_bar, 'right')
+
+output_notebook()#"gmap_plot.html"
+show(plot)
+# -
+
 # Regardons si les températures des stations météo sont corrélées entre elles :
 
 # +
@@ -286,16 +355,19 @@ plot_scatter_load('lag1W')
 cols = list(Xinput.columns[Xinput.columns.str.endswith("Th_prev")])
 #calcul de la corrélation en fonction de la saison
 
-Xinput['saison'] = ((Xinput['ds'].dt.month ==1) |(Xinput['ds'].dt.month==2)|(Xinput['ds'].dt.month==12)).astype(int)*1+((Xinput['ds'].dt.month ==3 )|(Xinput['ds'].dt.month==4)|(Xinput['ds'].dt.month==5)).astype(int)*2+((Xinput['ds'].dt.month ==6 )|(Xinput['ds'].dt.month==7)|(Xinput['ds'].dt.month==8)).astype(int)*3+((Xinput['ds'].dt.month ==9) |(Xinput['ds'].dt.month==10)|(Xinput['ds'].dt.month==11)).astype(int)*4  # conversion bool => int
+Xinput['saison'] = ((Xinput['ds'].dt.month == 1) | (Xinput['ds'].dt.month == 2) | (Xinput['ds'].dt.month == 12)).astype(int) * 1
++ ((Xinput['ds'].dt.month ==3 ) | (Xinput['ds'].dt.month == 4) | (Xinput['ds'].dt.month == 5)).astype(int) * 2
++ ((Xinput['ds'].dt.month == 6 )| (Xinput['ds'].dt.month == 7) | (Xinput['ds'].dt.month == 8)).astype(int) * 3
++ ((Xinput['ds'].dt.month == 9) | (Xinput['ds'].dt.month == 10) | (Xinput['ds'].dt.month == 11)).astype(int) * 4  # conversion bool => int
 matrix_correlation = Xinput[['saison'] + cols].groupby(['saison']).corr() 
 matrix_correlation
 # -
 
 #heatMap pour un meilleur visuel
-#.loc[1]=hiver
-#.loc[2]=printemps
-#.loc[3]=été
-#.loc[4]=automne
+#.loc[1] = hiver
+#.loc[2] = printemps
+#.loc[3] = été
+#.loc[4] = automne
 plt.imshow(matrix_correlation.loc[1].as_matrix(),cmap='PuBu_r', interpolation='nearest')
 plt.colorbar()
 plt.show()
@@ -720,9 +792,9 @@ forecastTrainXGB = xgbTrain.predict(XinputTrain[colsRF])
 evaluation(YconsoTrain, YconsoTest, forecastTrainXGB, forecastTestXGB)
 
 evalWD,evalHour,evalJF = evaluation_par(XinputTest,YconsoTest,forecastTestXGB)
-print(str(round(evalWD*100,1)))
-print(str(round(evalHour*100,1)))
-print(str(round(evalJF*100,1)))
+print(str(round(evalWD * 100,1)))
+print(str(round(evalHour * 100,1)))
+print(str(round(evalJF * 100,1)))
 
 # ### Question
 # - Selon vous, pourquoi l'erreur max est significative pour tous les modèles ?
