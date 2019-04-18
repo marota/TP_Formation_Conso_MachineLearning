@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 1.0.1
+#       jupytext_version: 1.0.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -45,15 +45,6 @@ import pandas as pd  # gérer des tables de données en python
 import numpy as np  # librairie d'opérations mathématiques
 import zipfile # manipulation de fichiers zip
 import urllib3 # téléchargement de fichier
-
-from bokeh.palettes import inferno
-from bokeh.io import show, output_notebook
-from bokeh.models import (
-  GMapPlot, GMapOptions, ColumnDataSource, Circle, Range1d, PanTool, WheelZoomTool, BoxSelectTool, ColorBar, LogTicker,
-    LabelSet, Label,HoverTool
-)
-from bokeh.models.mappers import LogColorMapper
-from collections import OrderedDict
 
 # %autosave 0
 
@@ -213,21 +204,11 @@ print(jours_feries_df.loc[450:500])
 # - Importez les données contenues dans le fichier csv *StationsMeteoRTE.csv* qui se situe dans data_folder vers un dataframe *stations_meteo_df*
 # - Regardez à quoi ces données ressemblent 
 
-# +
 # Chargez les données de StationsMeteoRTE.csv vers stations_meteo_df
-
-## TODO - START
 stations_meteo_csv = os.path.join(data_folder, "StationsMeteoRTE.csv")
 stations_meteo_df = pd.read_csv(stations_meteo_csv, sep=";")
-## TODO - END
 
-# +
-# Affichez les 5 premières lignes de stations_meteo_df
-
-## TODO - START
 stations_meteo_df.head(5)
-## TODO - END
-# -
 
 # Pour compter le nombre de stations il suffit de compter le nombre de lignes dans le data-frame
 # Ceci se fait un utilisant "shape"
@@ -283,76 +264,6 @@ meteo_prev_df = meteo_horaire_df[colonnes_a_garder]
 
 print(meteo_prev_df.head(5))
 print(meteo_prev_df.shape)
-
-# #### Pour se faire plaisir, on visualise les données météo sur une carte
-
-# +
-columns_of_interest = [col for col in meteo_horaire_df.columns if col.endswith("Th+0")]
-temperatures_realisees = meteo_horaire_df[columns_of_interest]
-temperature_journee = temperatures_realisees.loc[0]
-
-#print(temperature_journee)
-
-# +
-map_options = GMapOptions(lat=47.08, lng=2.39, map_type="roadmap", zoom=5)
-
-plot = GMapPlot(x_range=Range1d(), y_range=Range1d(), map_options=map_options)
-plot.title.text = "France"
-
-# For GMaps to function, Google requires you obtain and enable an API key:
-#
-#     https://developers.google.com/maps/documentation/javascript/get-api-key
-#
-# Replace the value below with your personal API key:
-plot.api_key = "AIzaSyC05Bs_e0q6KWyVHlmy0ymHMKMknyMbCm0"
-
-# nos données d'intérêt pour créer notre visualisation
-data = dict(lat=stations_meteo_df['latitude'],
-            lon=stations_meteo_df['longitude'],
-            label=stations_meteo_df['Nom'],
-            temp=temperature_journee
-           )
-
-source = ColumnDataSource(data)
-
-# l'échelle 
-Tlow = 0
-Thigh = 20
-color_mapper = LogColorMapper(palette="Viridis256", low=Tlow, high=Thigh)
-
-# la couleur de remplissage des cercles est fonction de la valeur de la temérature
-circle = Circle(x="lon", y="lat", 
-                size=15, 
-                fill_color={'field': 'temp', 'transform': color_mapper},
-                fill_alpha=0.8, 
-                line_color=None,)
-
-# les labels que l'on souhaite afficher en passant un curseur sur une station
-labels = LabelSet(x='lon', y='lat', text='label', level='glyph', x_offset=5, y_offset=5,
-                  source=source, render_mode='canvas')
-
-# on ajoute la layer
-plot.add_glyph(source, circle)
-
-# le tooltip quand on pose le curseur dessus
-hover = HoverTool(tooltips= OrderedDict([
-    ("index", "$index"),
-    ("(xx,yy)", "(@lon, @lat)"),
-    ("label", "@label"),
-    ("T", "@temp")
-]))
-
-# on plot
-plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool(), hover)
-
-
-color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(),
-                 label_standoff=12, border_line_color=None, location=(0,0))
-plot.add_layout(color_bar, 'right')
-
-output_notebook()#"gmap_plot.html"
-show(plot)
-# -
 
 # ## Bonus : récupération de données depuis internet
 #
@@ -475,7 +386,7 @@ merged_df
 # * La température réalisée 24h avant point_horaire_cible
 # Il faut simplement être vigilant sur le fait qu'il est interdit de prédire une consommation pour point horaire cible en ayant comme entrée la température réalisée pour point horaire cible (on n'est pas dans minority report)
 #
-# Ainsi, on va adapter _merged_df_ de sorte à ce que chaque ligne correspondent à un point horaire cible à prédire, avec en colonne :
+# Ainsi, on va adapter *merged_df* de sorte à ce que chaque ligne correspondent à un point horaire cible à prédire, avec en colonne :
 # * le Y (la consommation nationale pour point_horaire_cible)
 # * Le X (cf. ci-dessus)
 #
@@ -483,6 +394,28 @@ merged_df
 
 merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+0")])] = merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+0")])].shift(24)
 merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+24")])] = merged_df[list(merged_df.columns[merged_df.columns.str.endswith("Th+24")])].shift(24)
+
+# Par souci de clarté on renomme les colonnes
+
+# +
+new_columns = [column.replace("Th+0", "Th_real_24h_avant").replace("Th+24", "Th_prev") for column in merged_df.columns]
+print(new_columns)
+
+merged_df.columns = new_columns
+# -
+
+# ## Suppression des NaN
+
+print(merged_df.head(3))
+merged_df.shape
+
+# NB : Attention il est normal que la colonne "_holiday_" comporte des NaN
+
+mask = ~merged_df[["FranceTh_real_24h_avant"]].isnull().any(axis=1)
+merged_df = merged_df[mask]
+
+print(merged_df.head(3))
+merged_df.shape
 
 # ## Sauvegarde du fichier 
 #
@@ -500,7 +433,10 @@ X_input = merged_df.drop(['Consommation.NAT.t0'], axis=1)
 y_conso.to_csv("data/Yconso.csv", index = False)
 X_input.to_csv("data/Xinput.csv", index = False)
 
-
+# Et enfin on zip Xinput.csv avec un mot de passe.  
+# Depuis un terminal :
+#
+# > zip -e Xinput.zip Xinput.csv
 
 
 

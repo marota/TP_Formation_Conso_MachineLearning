@@ -339,26 +339,20 @@ hover = HoverTool(tooltips= OrderedDict([
 # on plot
 plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool(), hover)
 
-
-color_bar = ColorBar(color_mapper=color_mapper, ticker=LogTicker(),
-                 label_standoff=12, border_line_color=None, location=(0,0))
-plot.add_layout(color_bar, 'right')
-
 output_notebook()#"gmap_plot.html"
 show(plot)
 # -
 
 # Regardons si les températures des stations météo sont corrélées entre elles :
 
+Xinput.columns
+
 # +
 #matrix_correlation = meteo_obs_df.corr() #calcul d'une corrélation globale
 cols = list(Xinput.columns[Xinput.columns.str.endswith("Th_prev")])
 #calcul de la corrélation en fonction de la saison
 
-Xinput['saison'] = ((Xinput['ds'].dt.month == 1) | (Xinput['ds'].dt.month == 2) | (Xinput['ds'].dt.month == 12)).astype(int) * 1
-+ ((Xinput['ds'].dt.month ==3 ) | (Xinput['ds'].dt.month == 4) | (Xinput['ds'].dt.month == 5)).astype(int) * 2
-+ ((Xinput['ds'].dt.month == 6 )| (Xinput['ds'].dt.month == 7) | (Xinput['ds'].dt.month == 8)).astype(int) * 3
-+ ((Xinput['ds'].dt.month == 9) | (Xinput['ds'].dt.month == 10) | (Xinput['ds'].dt.month == 11)).astype(int) * 4  # conversion bool => int
+Xinput['saison'] = ((Xinput['ds'].dt.month == 1) | (Xinput['ds'].dt.month == 2) | (Xinput['ds'].dt.month == 12)).astype(int) * 1 + ((Xinput['ds'].dt.month ==3 ) | (Xinput['ds'].dt.month == 4) | (Xinput['ds'].dt.month == 5)).astype(int) * 2 + ((Xinput['ds'].dt.month == 6 )| (Xinput['ds'].dt.month == 7) | (Xinput['ds'].dt.month == 8)).astype(int) * 3 + ((Xinput['ds'].dt.month == 9) | (Xinput['ds'].dt.month == 10) | (Xinput['ds'].dt.month == 11)).astype(int) * 4  # conversion bool => int
 matrix_correlation = Xinput[['saison'] + cols].groupby(['saison']).corr() 
 matrix_correlation
 # -
@@ -444,7 +438,7 @@ temperature_prevu_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['
 delta_temp = min(threshold_temperature, temperature_prevu_cible) - min(threshold_temperature, temperature_real_veille)
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
-y_pred_modele_naif_2 = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['lag1D']) + delta_MW_because_temp
+y_pred_modele_naif_2 = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['lag1D']) - delta_MW_because_temp
 pred_error = abs(y_true_point_horaire_cible - y_pred_modele_naif_2)
 
 print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_naif_2, y_true_point_horaire_cible, pred_error/y_true_point_horaire_cible * 100))
@@ -461,7 +455,7 @@ temp_actual_with_threshold = np.minimum([threshold_temperature], Xinput['FranceT
 delta_temp = temp_prev_with_threshold - temp_actual_with_threshold
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
-y_pred_modele_naif_2 = Xinput["lag1D"] + delta_MW_because_temp
+y_pred_modele_naif_2 = Xinput["lag1D"] - delta_MW_because_temp
 pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred_modele_naif_2.loc[24:]) / Yconso["y"].loc[24:] * 100)
 
 print(np.mean(pred_error))
@@ -791,7 +785,7 @@ forecastTrainXGB = xgbTrain.predict(XinputTrain[colsRF])
 
 evaluation(YconsoTrain, YconsoTest, forecastTrainXGB, forecastTestXGB)
 
-evalWD,evalHour,evalJF = evaluation_par(XinputTest,YconsoTest,forecastTestXGB)
+evalWD,evalHour,evalJF = evaluation_par(XinputTest, YconsoTest, forecastTestXGB)
 print(str(round(evalWD * 100,1)))
 print(str(round(evalHour * 100,1)))
 print(str(round(evalJF * 100,1)))
