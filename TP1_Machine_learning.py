@@ -409,8 +409,7 @@ print("Modele 1 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_nai
 # +
 y_pred_modele_naif_1 = Xinput["lag1D"]
 
-# On ignore les 24 premières heures à cause des NaN suite du début
-pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred_modele_naif_1.loc[24:]) / Yconso["y"].loc[24:] * 100)
+pred_error = (np.abs(Yconso["y"] - y_pred_modele_naif_1.loc[24:]) / Yconso["y"] * 100)
 
 print(np.mean(pred_error))
 # -
@@ -456,7 +455,7 @@ delta_temp = temp_prev_with_threshold - temp_actual_with_threshold
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
 y_pred_modele_naif_2 = Xinput["lag1D"] - delta_MW_because_temp
-pred_error = (np.abs(Yconso["y"].loc[24:] - y_pred_modele_naif_2.loc[24:]) / Yconso["y"].loc[24:] * 100)
+pred_error = (np.abs(Yconso["y"] - y_pred_modele_naif_2) / Yconso["y"] * 100)
 
 print(np.mean(pred_error))
 
