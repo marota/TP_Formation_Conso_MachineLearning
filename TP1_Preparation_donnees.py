@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 1.0.0
+#       jupytext_version: 1.0.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -16,7 +16,7 @@
 
 # # TP facultatif : Préparation du jeu de données brut
 
-# Quand on se lance avec enthousiasme dans un nouveau projet de machine-learning, on pense avant tout au choix du modèle que l'on va utiliser. Cependant, et même s'il ne s'agit pas de l'étape la plus agréable du travail, un préalable indispensable est de réunir les données brutes et de les mettre en forme pour qu'elle puisse être ingérée par le modèle.
+# Quand on se lance avec enthousiasme dans un nouveau projet de machine-learning, on pense avant tout au choix du modèle que l'on va utiliser. Cependant, et même s'il ne s'agit pas de l'étape la plus agréable du travail, un préalable indispensable est de réunir les données brutes et de les mettre en forme pour qu'elles puissent être ingérées par le modèle.
 #
 # L'objectif de ce TP est de comprendre comment, à partir de différentes sources de données, on construit nos jeux de données "propres" pour ensuite construire le meilleur modèle d'apprentissage possible pour la prévision de consommation nationale.
 #
@@ -130,7 +130,7 @@ print("Le 31 décembre 2017 plus un jour ça donne le {}".format(bienvenu_en_201
 
 # #### Réduction du problème : se débarrasser des données qui ne nous intéressent pas
 #
-# Le dataframe de consommation est volumineux, et contient beaucoup d'information inutile (au moins en première approximation) pour notre problème de prévision de la consommation nationale. On va donc le simplifier.
+# Le dataframe de consommation est volumineux, et contient beaucoup d'informations inutiles (au moins en première approximation) pour notre problème de prévision de la consommation nationale. On va donc le simplifier.
 #
 # On va se concentrer sur la consommation à l'**échelle nationale** au **pas horaire**. On va donc ne conserver que la colonne qui nous intéresse, et ne conserver que les lignes qui correspondent aux heures pleines.
 

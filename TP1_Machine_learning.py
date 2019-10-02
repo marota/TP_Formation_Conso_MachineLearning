@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.3'
-#       jupytext_version: 1.0.0
+#       jupytext_version: 1.0.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -22,17 +22,17 @@
 #
 # <img src="pictures/ChallengeConso.png" width=1000 height=100>
 #
-# Comme dans ce challenge, nous voulons aider RTE a faire de meilleures prévisions de conso ! 
+# Comme dans ce challenge, nous voulons aider RTE à faire de meilleures prévisions de conso ! 
 
 # ## Un outil: le Machine Learning
 #
-# Pour cela nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend et s'adapte au contexte sans programmer un système expert avec des "centaines" de règles en dur par de la programmation logique. 
+# Pour cela, nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend et s'adapte au contexte sans programmer un système expert avec des "centaines" de règles en dur, par de la programmation logique. 
 #
 # Le Machine Learning nécessite toutefois de la connaissance experte dans le domaine d'intérêt pour créer des modèles pertinents et efficaces. En effet, si notre modèle embarque trop de variables peu explicatives, il sera noyé dans l'information, surapprendra sur les exemples qu'on lui a montrés, et aura du mal à généraliser en prédisant avec justesse sur de nouveaux exemples. 
 
 # ## Une difficulté: le feature engineering
 #
-# Au-delà de la simple sélection de variables pertinentes, on fait surtout ce que l'on appelle du feature engineering avec notre expertise: on crée des variables transformées ou aggrégées, comme une consommation moyenne sur le mois précédent ou une température moyenne sur la France, pour guider l'algorithme à apprendre sur l'information la plus pertinente et synthétique. Cela implique de bien connaître nos données, de passer du temps à les visualiser, et de les prétraiter avant de les fournir au modèle de machine-learning.
+# Au-delà de la simple sélection de variables pertinentes, on fait surtout ce que l'on appelle du feature engineering avec notre expertise: on crée des variables transformées ou agrégées, comme une consommation moyenne sur le mois précédent ou une température moyenne sur la France, pour guider l'algorithme et l'aider à apprendre sur l'information la plus pertinente et synthétique. Cela implique de bien connaître nos données, de passer du temps à les visualiser, et de les prétraiter avant de les fournir au modèle de machine-learning.
 #
 # Nous allons ici voir ce que cela implique en terme de développement et d'implémentation de participer à un tel challenge, en montrant les capacités du Machine Learning sur la base de modèles "classiques".
 #
@@ -54,7 +54,7 @@
 # 8) Jouez: créer vos propres modèles, tester sur une saison différente, tester sur une région différente, faire une prévision avec incertitudes, détecter des outliers
 #
 # ## To be continued
-# Le deuxième TP permettra d'investiguer les modèles "Deep" avec réseaux de neurones, en montrant le moindre besoin en feature engineering et leur plus grande capacité a absorber l'information de par les représentations hiérarchiques qu'ils se créent.
+# Le deuxième TP permettra d'investiguer les modèles "Deep" avec réseaux de neurones, en montrant le moindre besoin en feature engineering et leur plus grande capacité à absorber l'information grâce aux représentations hiérarchiques qu'ils créent.
 
 # ## Dimensionnement en temps
 # On prévoit un une durée d'environ 2h pour ce TP1, debrief inclus :
@@ -84,9 +84,9 @@ import matplotlib.pyplot as plt  # tracer des visualisations
 import sklearn  # librairie de machine learning
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
+from sklearn import linear_model
 from math import sqrt
 
-from fbprophet import Prophet  # un package de series temporelles mis a disposition par facebook
 import shutil  # move ou copier fichier
 import zipfile  # compresser ou décompresser fichier
 import urllib3 # téléchargement de fichier
@@ -143,7 +143,7 @@ print(Yconso.shape)
 
 Xinput_zip = os.path.join(data_folder, "Xinput.zip")
 
-password = None
+password = none
 
 
 # +
@@ -153,6 +153,7 @@ zipfile_xinput.setpassword(bytes(password,'utf-8'))
 Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=",",engine='c',header=0)
 
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
+Xinput = Xinput[[s for s in Xinput.columns.get_values() if 'X' not in s]]
 # -
 
 print(Xinput.head(35))
@@ -161,17 +162,16 @@ print(Xinput.columns)
 
 # # Visualisation des données 
 #
-# La DataScience et le Machine Learning supposent de bien appréhender les données sur lesquelles nos modèles vont être entrainés. Pour se faire, il est utile de se faire quelques stats descriptives et des visualisations pour nos différentes variables.
+# La DataScience et le Machine Learning supposent de bien appréhender les données sur lesquelles nos modèles vont être entrainés. Pour cela, il est utile de faire des statistiques descriptives et des visualisations de nos différentes variables.
 #
-# Traitant d'un problème de prévisions, on visualisera en particulier des séries temporelles.
+# Traitant d'un problème de prévision, on visualisera en particulier des séries temporelles.
 #
-# Vous allez voir:
+# Vous allez voir des :
 # - échantillons de données
 # - profils de courbe de consommation journaliers et saisonniers
-# - visualisation de corrélation entre conso J et conso retardée
-# - visualisations des stations météos
+# - visualisations de corrélation entre conso J et conso retardée
 # - visualisations des séries temporelles des températures
-# - calcul de corrélation sur la température entre les différentes stations météo
+# - calculs de corrélations entre la température et les différentes stations météo
 
 # ## Calcul de statistiques descriptives sur la consommation nationale
 # A l'aide de la fonction _describe_.
@@ -210,7 +210,7 @@ def plot_load_timedelta(var_load, year, month, day, delta_days):
 plot_load_timedelta(Yconso, 2016, 12, 20, delta_days=7)
 
 # ## Observation des profils de la consommation pour les mois d'hiver et les mois d'été
-# Toujours dans le but d'appréhender nos données, on va regarder les profils moyens pour le smois d'été et pour ceux d'hiver. On va également observer le min et le max pour avoir une idée de la variabilité du signal.
+# Toujours dans le but d'appréhender nos données, on va regarder les profils moyens pour les mois d'été et pour ceux d'hiver. On va également observer le min et le max pour avoir une idée de la variabilité du signal.
 
 # +
 # Par commodité, on isole le mois pour après attraper les mois d'hiver et d'été
@@ -262,7 +262,7 @@ plt.show()
 # - du jour précédent, 
 # - de la semaine précédente.
 #
-# On regarde ensuite si la consommation réalisé peut se deviner à partir de ces observations.
+# On regarde ensuite si la consommation réalisée peut se deviner à partir de ces observations.
 
 Xinput['lag1H'] = Yconso['y'].shift(1)
 Xinput['lag1D'] = Yconso['y'].shift(24)
@@ -286,102 +286,16 @@ plot_scatter_load('lag1W')
 # ### Question
 # Que pensez-vous de ces corrélations ?
 
-# ## Visualisation des stations météo
+# ## Visualiser la consommation en fonction de la température 
+# On voudrait savoir si la consommation nationale peut s'expliquer en regardant simplement la température moyenne sur la France. Pour cela, on peut tracer un nuage de points.
 
-# Chargez les données de StationsMeteoRTE.csv vers stations_meteo_df
-stations_meteo_csv = os.path.join(data_folder, "StationsMeteoRTE.csv")
-stations_meteo_df = pd.read_csv(stations_meteo_csv, sep=";")
-
-stations_meteo_df.head(5)
-
-# +
-map_options = GMapOptions(lat=47.08, lng=2.39, map_type="roadmap", zoom=5)
-
-plot = GMapPlot(x_range=Range1d(), y_range=Range1d(), map_options=map_options)
-plot.title.text = "France"
-
-# For GMaps to function, Google requires you obtain and enable an API key:
-#
-#     https://developers.google.com/maps/documentation/javascript/get-api-key
-#
-# Replace the value below with your personal API key:
-plot.api_key = "AIzaSyC05Bs_e0q6KWyVHlmy0ymHMKMknyMbCm0"
-
-# nos données d'intérêt pour créer notre visualisation
-data = dict(lat=stations_meteo_df['latitude'],
-            lon=stations_meteo_df['longitude'],
-            label=stations_meteo_df['Nom'],
-           )
-
-source = ColumnDataSource(data)
-
-# la couleur de remplissage des cercles est fonction de la valeur de la temérature
-circle = Circle(x="lon", y="lat", 
-                size=15, 
-                fill_color="green",
-                fill_alpha=0.8, 
-                line_color=None,)
-
-# les labels que l'on souhaite afficher en passant un curseur sur une station
-labels = LabelSet(x='lon', y='lat', text='label', level='glyph', x_offset=5, y_offset=5,
-                  source=source, render_mode='canvas')
-
-# on ajoute la layer
-plot.add_glyph(source, circle)
-
-# le tooltip quand on pose le curseur dessus
-hover = HoverTool(tooltips= OrderedDict([
-    ("index", "$index"),
-    ("(xx,yy)", "(@lon, @lat)"),
-    ("label", "@label")
-]))
-
-# on plot
-plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool(), hover)
-
-output_notebook()#"gmap_plot.html"
-show(plot)
-# -
-
-# Regardons si les températures des stations météo sont corrélées entre elles :
-
-Xinput.columns
-
-# +
-#matrix_correlation = meteo_obs_df.corr() #calcul d'une corrélation globale
-cols = list(Xinput.columns[Xinput.columns.str.endswith("Th_prev")])
-#calcul de la corrélation en fonction de la saison
-
-Xinput['saison'] = ((Xinput['ds'].dt.month == 1) | (Xinput['ds'].dt.month == 2) | (Xinput['ds'].dt.month == 12)).astype(int) * 1 + ((Xinput['ds'].dt.month ==3 ) | (Xinput['ds'].dt.month == 4) | (Xinput['ds'].dt.month == 5)).astype(int) * 2 + ((Xinput['ds'].dt.month == 6 )| (Xinput['ds'].dt.month == 7) | (Xinput['ds'].dt.month == 8)).astype(int) * 3 + ((Xinput['ds'].dt.month == 9) | (Xinput['ds'].dt.month == 10) | (Xinput['ds'].dt.month == 11)).astype(int) * 4  # conversion bool => int
-matrix_correlation = Xinput[['saison'] + cols].groupby(['saison']).corr() 
-matrix_correlation
-# -
-
-#heatMap pour un meilleur visuel
-#.loc[1] = hiver
-#.loc[2] = printemps
-#.loc[3] = été
-#.loc[4] = automne
-plt.imshow(matrix_correlation.loc[1].as_matrix(),cmap='PuBu_r', interpolation='nearest')
-plt.colorbar()
+plt.scatter(Xinput['FranceTh_prev'], Yconso['y'], alpha=0.2)
 plt.show()
 
 # ### Question
-# - Que pensez-vous de ces corrélations ?
+# Que pensez-vous de ce nuage ? Est-ce suffisant ?
 
-# ## Visualiser la consommation en fonction de la température de la station Paris-Montsouris
-# On voudrait savoir si la consommation nationale peut s'expliquer en regardant simplement la température de la station du Parc Montsouris et en ignorant ce qui est extérieur au périphérique (Paris étant le centre du monde). Pour cela, on peut tracer un nuage de points.
-#
-# NB : Paris Montsouris est la station météo n°156
-#
-
-plt.scatter(Xinput['X156Th_prev'], Yconso['y'], alpha=0.2)
-plt.show()
-
-# ### Question
-# - Que pensez-vous de ce nuage ? Est-ce suffisant ?
-
-# ## Bricolage d'un modèle prédictif naïf
+# # Bricolage d'un modèle prédictif naïf
 #
 # <img src="pictures/hommeNaif.png" width=500 height=60>
 
@@ -416,15 +330,15 @@ print(np.mean(pred_error))
 
 # Bon c'est pas fou...
 
-# ## Deuxième idée avec de l'expertise : pareil, avec comme raffinement le fait que l'on considere maintenant l'influence de la temperature
+# ## Deuxième idée : modèle naïf avec de l'expertise métier 
+#
+# Chez RTE, on considère qu'une augmentation moyenne de 1°C conduit à une augmentation de 2400MW de la consommation nationale pour des températures inférieures à 15°C. On propose donc comme consommation prévue la consommation de la veille, corrigée par 2400 fois l'écart à la température de la veille, si l'on n'excède pas les 15°C.
+#
 #
 # <img src="pictures/ExpertJamy.jpg" width=500 height=60>
 
 # +
-delta_MW_par_degre = 2300  # par expertise, 
-                           # on considere qu'une augmentation moyenne de 1°C 
-                           # conduit à une augmentation de 2300MW de la conso nationale
-                           # Si on est en dessous de 15°C
+delta_MW_par_degre = 2400  
             
 threshold_temperature = 15
 # -
@@ -568,47 +482,109 @@ def evaluation_par(X, Y, Yhat,avecJF=True):
     return statsWD, statsHour, statsJF
 
 
-Xinput.head()
+# ## Preparation de Xinput
 
-# # Créer un modèle avec Prophet
-# Vous allez utiliser la librairie Prophet developpée par facebook.: https://research.fb.com/prophet-forecasting-at-scale/. Elle a été publiée en 2017 et permet de faire des modèles de prévision sur des séries temporelles. En particulier, ces modèles captent surtout des saisonnalités, et peuvent également tenir compte de jours particuliers comme les jours fériés. Il est possible de rajouter d'autre variables explicatives selon un modèle statistique linéaire.
-#
-# C'est une librairie relativement ergonomique et performante en terme de temps de calculs d'où son choix ici.
-# Un des aspects intéressant également est qu'elle repose sur un language probabiliste PyStan. Il est ainsi possible de décrire des variables selon une loi dans notre modèle et d'obtenir sans plus de développement des intervalles de confiance et incertitudes.
-#
-# Pour un tutoriel bien fait pour comprendre et utiliser Prophet, je vous recommande le lien suivant: http://www.degeneratestate.org/posts/2017/Jul/24/making-a-prophet/
-#
-# La prophétie autoréalisatrice: Marc Zuckerberg futur Président ..??
-#
-# <img src="pictures/zuckerbergProphet.jpg" width=500 height=30>
+Xinput = Xinput_save
+Xinput = Xinput.drop(['lag1H'],axis=1)  # on supprime la consommation retardée d'une heure, non disponible pour notre exercice de prévision
 
-# creer un modèle prophet avec une saisonnalité journalière et une tendance nulle pour la consommation
-mTrain = Prophet(daily_seasonality=True, n_changepoints=0)  # on considere une tendance relativement constante pour la consommation sur les 4 ans
+print(Xinput.shape)
+print(Xinput.columns)
+
+# On encode les données calendaires en one-hot encoding pour le modèle.
+# Cet encodage est nécessaire pour que le modèle mathématique puisse appréhender la notion de date.
+
+encodedWeekDay = pd.get_dummies(Xinput['weekday'],prefix="weekday")
+encodedMonth = pd.get_dummies(Xinput['month'],prefix="month")
+encodedHour = pd.get_dummies(Xinput['hour'],prefix="hour")
+
+encodedWeekDay.head(3)
+
+encodedMonth.head(3)
+
+encodedHour.head(3)
+
+Xinput = pd.concat([Xinput, encodedMonth, encodedWeekDay, encodedHour], axis=1)
+Xinput = Xinput.drop(['month','weekday','hour'],axis=1)
+
+print(Xinput.shape)
+print(Xinput.columns)
+
+# Récupération des prévisions météo à J+1 pour la veille
+colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
+lag_colsToKeepWeather = [ s + "_J_1" for s in colsToKeepWeather ]
+Xinput[lag_colsToKeepWeather] = Xinput[colsToKeepWeather].shift(24)
+time = pd.to_datetime(Xinput['ds'], yearfirst=True)
+Xinput['posan']= time.dt.dayofyear
+
+#Récupération des jours fériés dans Xinput
+encodedHolidays = pd.get_dummies(Xinput[['holiday']], prefix = "JF")
+encodedHolidays['JoursFeries'] = encodedHolidays.sum(axis = 1)
+Xinput = pd.concat([Xinput, encodedHolidays], axis = 1)
+Xinput = Xinput.drop(['holiday'], axis = 1)
+
+#affichage de toutes les variables de base
+list(Xinput) #list plutôt que print pour avoir la liste complète
+
+XinputTrain, XinputTest, YconsoTrain, YconsoTest = prepareDataSetEntrainementTest(Xinput, 
+                                                                                  Yconso, 
+                                                                                  dateDebut, 
+                                                                                  dateRupture, 
+                                                                                  nbJourlagRegresseur)
+
+print('shape de XinputTrain est:' + str(XinputTrain.shape[0]))
+print('shape de XinputTest est:' + str(XinputTest.shape[0]))
+print('shape de YconsoTrain est:' + str(YconsoTrain.shape[0]))
+print('shape de YconsoTest est:' + str(YconsoTest.shape[0]))
+print('la proportion de data d entrainement est de:' + str(YconsoTrain.shape[0] / (YconsoTrain.shape[0] + YconsoTest.shape[0])))
+
+colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
+colsToKeepMonth = [v for v in Xinput.columns.get_values() if 'month' in v]
+colsToKeepWeekday = [v for v in Xinput.columns.get_values() if 'weekday' in v]
+colsToKeepHour = [v for v in Xinput.columns.get_values() if 'hour' in v]
+colsToKeepHolidays = [v for v in Xinput.columns.get_values() if 'JF_' in v]
+
+#
+# # Régression linéaire simple
+#
+# Le modèle naïf avec expertise métier a été inspiré de la forme de la courbe d'évolution de la consommation en fonction de la température en France. 
+# Pour rappel:
+
+plt.scatter(Xinput_save['FranceTh_prev'], Yconso['y'], alpha=0.2)
+plt.show()
+
+# La consommation pourrait être modélisée par une fonction linéaire par morceaux de la température, avec une pente plus importante pour les températures froides que pour les températures élevées. Au lieu de fixer les gradients à 2400MW/°C et 0, ceux-ci pourraient être calibrés à partir des données.
+#
 
 # ## Entrainer un modèle
-# Notre modèle a des paramètres tels que les saisonnalités qu'il va falloir maintenant apprendre au vu de notre jeu d'entrainement. Il faut donc caler notre modèle sur ce jeu d'entrainement.
+# Notre modèle a des paramètres qu'il va falloir maintenant apprendre au vu de notre jeu d'entrainement. Il faut donc caler notre modèle sur ce jeu d'entrainement.
 
-mTrain.fit(XinputTrain)
+mTrain = linear_model.LinearRegression()
+colsLR = np.concatenate((['lag1D','lag1W','JoursFeries'],
+                         colsToKeepWeather,colsToKeepMonth,colsToKeepWeekday))
+list(colsLR)
+
+mTrain.fit(XinputTrain[colsLR], YconsoTrain[['y']])
 
 # ## Faire des prédictions
 # Une fois qu'un modèle de prévision est entrainé, il ne s'avère utile que s'il est performant sur de nouvelles situations. Faisons une prévision sur notre jeu de test.
 
-forecastTest = mTrain.predict(XinputTest)
-forecastTrain = mTrain.predict(XinputTrain)
+forecastTest = mTrain.predict(XinputTest[colsLR])
+forecastTrain = mTrain.predict(XinputTrain[colsLR])
+
+print(forecastTest)
 
 # +
 # on visualise nos previsions avec incertitudes
 dateavantRupture = dateRupture - pd.Timedelta('30 days')  # pour visualiser aussi les réalisations d'avant
 
-print('on plot a partir de la date:' + str(dateavantRupture))
-mTrain.history = mTrain.history[mTrain.history.ds >= dateavantRupture]  # pour demander à Prophet de ne plotter que notre période d'interet
+
 mTrain.plot(forecastTest)
 
 plt.show()
 # -
 
 # ## Visualiser le modèle
-# Prophet dispose de méthodes de visualisation qui permettent d'interpreter le modèle appris, en particulier d'un point de vue des saisonalités.
+# Visu des saisonnalités
 
 # +
 # on visualise notre modele avec ses saisonalites
@@ -633,7 +609,13 @@ plt.show()
 # ## Evaluer l'erreur de prévision
 # Au vu de ces previsions faites par notre modèle sur de nouvelles situations, quelle est la performance de notre modèle sur ce jeu de test ?
 
-evaluation(YconsoTrain, YconsoTest, forecastTrain['yhat'], forecastTest['yhat'])
+# +
+evaluation(YconsoTrain, YconsoTest, forecastTrain, forecastTest)
+
+# on visualise nos previsions par rapport a la realité
+plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b', YconsoTest['ds'], forecastTest, 'r')
+plt.show()
+# -
 
 # on visualise nos previsions par rapport a la realité
 plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b')
@@ -668,62 +650,7 @@ forecastTest['ds'].loc[mask]
 # ## Feature engineering
 # Quelles variables explicatives peuvent nous permettre de créer un modele plus perfomant ?
 
-# # On quitte Prophet pour d'autres modèles : RandomForest et XGBoost
-
-# ## Preparation de Xinput
-
-Xinput = Xinput_save
-Xinput = Xinput.drop(['lag1H'],axis=1)  # on supprime la consommation retardée d'une heure, non disponible pour notre exercice de prévision
-
-print(Xinput.shape)
-print(Xinput.columns)
-
-# On encode les données calendaires en one-hot encoding pour le modèle.
-# Cet encodage est nécessaire pour que le modèle mathématique puisse appréhender la notion de date.
-
-encodedWeekDay = pd.get_dummies(Xinput['weekday'],prefix="weekday")
-encodedMonth = pd.get_dummies(Xinput['month'],prefix="month")
-encodedHour = pd.get_dummies(Xinput['hour'],prefix="hour")
-
-encodedWeekDay.head(3)
-
-encodedMonth.head(3)
-
-encodedHour.head(3)
-
-Xinput = pd.concat([Xinput, encodedMonth, encodedWeekDay, encodedHour], axis=1)
-Xinput = Xinput.drop(['month','weekday','hour','saison'],axis=1)
-
-print(Xinput.shape)
-print(Xinput.columns)
-
-# Récupération des prévisions météo à J+1 pour la veille
-colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
-lag_colsToKeepWeather = [ s + "_J_1" for s in colsToKeepWeather ]
-Xinput[lag_colsToKeepWeather] = Xinput[colsToKeepWeather].shift(24)
-time = pd.to_datetime(Xinput['ds'], yearfirst=True)
-Xinput['posan']= time.dt.dayofyear
-
-#Récupération des jours fériés dans Xinput
-encodedHolidays = pd.get_dummies(Xinput[['holiday']], prefix = "JF")
-encodedHolidays['JoursFeries'] = encodedHolidays.sum(axis = 1)
-Xinput = pd.concat([Xinput, encodedHolidays], axis = 1)
-Xinput = Xinput.drop(['holiday'], axis = 1)
-
-#affichage de toutes les variables de base
-list(Xinput) #list plutôt que print pour avoir la liste complète
-
-XinputTrain, XinputTest, YconsoTrain, YconsoTest = prepareDataSetEntrainementTest(Xinput, 
-                                                                                  Yconso, 
-                                                                                  dateDebut, 
-                                                                                  dateRupture, 
-                                                                                  nbJourlagRegresseur)
-
-print('shape de XinputTrain est:' + str(XinputTrain.shape[0]))
-print('shape de XinputTest est:' + str(XinputTest.shape[0]))
-print('shape de YconsoTrain est:' + str(YconsoTrain.shape[0]))
-print('shape de YconsoTest est:' + str(YconsoTest.shape[0]))
-print('la proportion de data d entrainement est de:' + str(YconsoTrain.shape[0] / (YconsoTrain.shape[0] + YconsoTest.shape[0])))
+# # Autres modèles : RandomForest et XGBoost
 
 # ## Modèle RandomForest
 #
@@ -733,17 +660,9 @@ from sklearn.ensemble import RandomForestRegressor
 
 # ### Préparation des données d'entrée
 
-# +
-colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
-colsToKeepMonth = [v for v in Xinput.columns.get_values() if 'month' in v]
-colsToKeepWeekday = [v for v in Xinput.columns.get_values() if 'weekday' in v]
-colsToKeepHour = [v for v in Xinput.columns.get_values() if 'hour' in v]
-colsToKeepHolidays = [v for v in Xinput.columns.get_values() if 'JF_' in v]
-
 colsRF = np.concatenate((['lag1D','lag1W','JoursFeries'],
                          colsToKeepWeather,colsToKeepMonth,colsToKeepWeekday,colsToKeepHour))
 list(colsRF)
-# -
 
 # ### Entrainement du modèle
 
