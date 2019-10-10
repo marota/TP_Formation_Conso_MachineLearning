@@ -70,6 +70,8 @@
 
 # # On passe au code : import de librairies et configuration
 
+# ** L'aide de python est accessible en tapant help(nom_de_la_commande) **
+
 # ## Chargement des Librairies
 
 # +
@@ -143,7 +145,7 @@ print(Yconso.shape)
 
 Xinput_zip = os.path.join(data_folder, "Xinput.zip")
 
-password = none
+password = "FIFA_Meteo"
 
 
 # +
@@ -177,6 +179,8 @@ print(Xinput.columns)
 # A l'aide de la fonction _describe_.
 
 Yconso['y'].describe()
+
+Yconso['y'].isnull().sum()
 
 
 # ## Visualiser la consommation d'un jour particulier
@@ -401,30 +405,6 @@ def prepareDataSetEntrainementTest(Xinput, Yconso, dateDebut, dateRupture, nbJou
     return XinputTrain, XinputTest, YconsoTrain, YconsoTest
 
 
-# +
-# on souhaite un jeu de test qui commence à partir du 1er mai 2017
-dateDebut = datetime.datetime(year=2013, month=1, day=7)#pour éviter les NaN dans le jeu de données
-dateRupture = datetime.datetime(year=2017, month=5, day=1)#début du challenge prevision de conso
-
-# On va commencer par un modèle autoregressif très simple, ici X=Y
-# Pas de prise en compte de la météo, des variables calendaires, etc...
-# Attention, on conserve dans un autre objet la matrice des variables exogènes
-Xinput_save = Xinput
-Xinput = Yconso 
-nbJourlagRegresseur = 0  # pas de prise en compte des consommations passées pour l'instant
-# -
-
-XinputTrain, XinputTest, YconsoTrain, YconsoTest = prepareDataSetEntrainementTest(Xinput, Yconso, 
-                                                                                  dateDebut, dateRupture, 
-                                                                                  nbJourlagRegresseur)
-
-print('la taille de l échantillon XinputTrain est:' + str(XinputTrain.shape))
-print('la taille de l échantillon XinputTest est:' + str(XinputTest.shape))
-print('la taille de l échantillon YconsoTrain est:' + str(YconsoTrain.shape))
-print('la taille de l échantillon YconsoTest est:' + str(YconsoTest.shape))
-print("la proportion de data d'entrainement est de:" + str(YconsoTrain.shape[0] / (YconsoTrain.shape[0] + YconsoTest.shape[0])))
-
-
 # # Fonctions utilitaires
 
 # Créons la fonction modelError qui va calculer pour un échantillon (Y, Y_hat) différents scores :
@@ -484,7 +464,6 @@ def evaluation_par(X, Y, Yhat,avecJF=True):
 
 # ## Preparation de Xinput
 
-Xinput = Xinput_save
 Xinput = Xinput.drop(['lag1H'],axis=1)  # on supprime la consommation retardée d'une heure, non disponible pour notre exercice de prévision
 
 print(Xinput.shape)
@@ -522,20 +501,20 @@ encodedHolidays['JoursFeries'] = encodedHolidays.sum(axis = 1)
 Xinput = pd.concat([Xinput, encodedHolidays], axis = 1)
 Xinput = Xinput.drop(['holiday'], axis = 1)
 
+# On ajoute des températures seuillées, à 15°C pour l'effet chauffage, et à 18°C pour l'effet climatisation.
+
+# +
+threshold_temperature_heat = 15
+threshold_temperature_cool = 18
+
+Xinput['temp_prev_with_threshold_heat'] = np.maximum(0, threshold_temperature_heat - Xinput['FranceTh_prev'].values)
+Xinput['temp_prev_with_threshold_cool'] = np.maximum(0, Xinput['FranceTh_prev'].values - threshold_temperature_cool)
+# -
+
 #affichage de toutes les variables de base
 list(Xinput) #list plutôt que print pour avoir la liste complète
 
-XinputTrain, XinputTest, YconsoTrain, YconsoTest = prepareDataSetEntrainementTest(Xinput, 
-                                                                                  Yconso, 
-                                                                                  dateDebut, 
-                                                                                  dateRupture, 
-                                                                                  nbJourlagRegresseur)
-
-print('shape de XinputTrain est:' + str(XinputTrain.shape[0]))
-print('shape de XinputTest est:' + str(XinputTest.shape[0]))
-print('shape de YconsoTrain est:' + str(YconsoTrain.shape[0]))
-print('shape de YconsoTest est:' + str(YconsoTest.shape[0]))
-print('la proportion de data d entrainement est de:' + str(YconsoTrain.shape[0] / (YconsoTrain.shape[0] + YconsoTest.shape[0])))
+# Enfin, nous construisons les listes pour appeler plus rapidement les colonnes d'un même type.
 
 colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
 colsToKeepMonth = [v for v in Xinput.columns.get_values() if 'month' in v]
@@ -543,13 +522,30 @@ colsToKeepWeekday = [v for v in Xinput.columns.get_values() if 'weekday' in v]
 colsToKeepHour = [v for v in Xinput.columns.get_values() if 'hour' in v]
 colsToKeepHolidays = [v for v in Xinput.columns.get_values() if 'JF_' in v]
 
+# # Construction des jeux d'entrainement et de test
+
+# on souhaite un jeu de test qui commence à partir du 1er mai 2017
+dateDebut = datetime.datetime(year=2013, month=1, day=7)#pour éviter les NaN dans le jeu de données
+dateRupture = datetime.datetime(year=2017, month=5, day=1)#début du challenge prevision de conso
+nbJourlagRegresseur = 0
+
+XinputTrain, XinputTest, YconsoTrain, YconsoTest = prepareDataSetEntrainementTest(Xinput, Yconso, 
+                                                                                  dateDebut, dateRupture, 
+                                                                                  nbJourlagRegresseur)
+
+print('la taille de l échantillon XinputTrain est:' + str(XinputTrain.shape))
+print('la taille de l échantillon XinputTest est:' + str(XinputTest.shape))
+print('la taille de l échantillon YconsoTrain est:' + str(YconsoTrain.shape))
+print('la taille de l échantillon YconsoTest est:' + str(YconsoTest.shape))
+print("la proportion de data d'entrainement est de:" + str(YconsoTrain.shape[0] / (YconsoTrain.shape[0] + YconsoTest.shape[0])))
+
 #
 # # Régression linéaire simple
 #
 # Le modèle naïf avec expertise métier a été inspiré de la forme de la courbe d'évolution de la consommation en fonction de la température en France. 
 # Pour rappel:
 
-plt.scatter(Xinput_save['FranceTh_prev'], Yconso['y'], alpha=0.2)
+plt.scatter(Xinput['FranceTh_prev'], Yconso['y'], alpha=0.2)
 plt.show()
 
 # La consommation pourrait être modélisée par une fonction linéaire par morceaux de la température, avec une pente plus importante pour les températures froides que pour les températures élevées. Au lieu de fixer les gradients à 2400MW/°C et 0, ceux-ci pourraient être calibrés à partir des données.
@@ -558,38 +554,28 @@ plt.show()
 # ## Entrainer un modèle
 # Notre modèle a des paramètres qu'il va falloir maintenant apprendre au vu de notre jeu d'entrainement. Il faut donc caler notre modèle sur ce jeu d'entrainement.
 
-mTrain = linear_model.LinearRegression()
-colsLR = np.concatenate((['lag1D','lag1W','JoursFeries'],
-                         colsToKeepWeather,colsToKeepMonth,colsToKeepWeekday))
-list(colsLR)
+# +
+colsLR_simple = np.concatenate(([s for s in XinputTrain.columns.get_values() if 'temp_prev_with_' in s], colsToKeepHour, colsToKeepWeekday, colsToKeepMonth))
 
-mTrain.fit(XinputTrain[colsLR], YconsoTrain[['y']])
+mTrain = linear_model.LinearRegression(fit_intercept = False)
+# -
+
+mTrain.fit(XinputTrain[colsLR_simple], YconsoTrain[['y']])
+print('Coefficients: \n', mTrain.coef_)
 
 # ## Faire des prédictions
 # Une fois qu'un modèle de prévision est entrainé, il ne s'avère utile que s'il est performant sur de nouvelles situations. Faisons une prévision sur notre jeu de test.
 
-forecastTest = mTrain.predict(XinputTest[colsLR])
-forecastTrain = mTrain.predict(XinputTrain[colsLR])
-
-print(forecastTest)
+forecastTest = np.concatenate(mTrain.predict(XinputTest[colsLR_simple]))
+forecastTrain = np.concatenate(mTrain.predict(XinputTrain[colsLR_simple]))
 
 # +
-# on visualise nos previsions avec incertitudes
-dateavantRupture = dateRupture - pd.Timedelta('30 days')  # pour visualiser aussi les réalisations d'avant
+# on visualise nos previsions 
 
-
-mTrain.plot(forecastTest)
-
+plt.scatter(forecastTest, YconsoTest[['y']])
 plt.show()
-# -
 
-# ## Visualiser le modèle
-# Visu des saisonnalités
-
-# +
-# on visualise notre modele avec ses saisonalites
-mTrain.plot_components(forecastTest)
-
+plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b', YconsoTest['ds'], forecastTest, 'r')
 plt.show()
 # -
 
@@ -598,29 +584,10 @@ plt.show()
 # - quelles interprétations pouvez-vous faire du modèle?
 # - Comment varie le comportement de la courbe de consommation?
 
-# +
-#avecJF=False#on n a pas encore considere de jours feries
-#evalWD,evalHour,evalJF = evaluation_par(XinputTest,YconsoTest,forecastTest['yhat'],avecJF)
-#print(str(round(evalWD*100,1)))
-#print(str(round(evalHour*100,1)))
-#print(str(round(evalJF*100,1)))
-# -
-
 # ## Evaluer l'erreur de prévision
-# Au vu de ces previsions faites par notre modèle sur de nouvelles situations, quelle est la performance de notre modèle sur ce jeu de test ?
+# Quelle est la performance de notre modèle sur ce jeu de test ?
 
-# +
-evaluation(YconsoTrain, YconsoTest, forecastTrain, forecastTest)
-
-# on visualise nos previsions par rapport a la realité
-plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b', YconsoTest['ds'], forecastTest, 'r')
-plt.show()
-# -
-
-# on visualise nos previsions par rapport a la realité
-plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b')
-plt.plot(forecastTest['ds'], forecastTest['yhat'], 'r')
-plt.show()
+evaluation(YconsoTrain, YconsoTest, forecastTrain,  forecastTest)
 
 # ## Enquêter autour des erreurs de prévision
 
@@ -628,7 +595,7 @@ plt.show()
 
 # ### Comment se distribue l'erreur ?
 
-erreur_relative_test, erreur_moyenne_test, erreur_max_test, rmse = modelError(YconsoTest, forecastTest['yhat'])
+erreur_relative_test, erreur_moyenne_test, erreur_max_test, rmse = modelError(YconsoTest, forecastTest)
 
 num_bins = 100
 plt.hist(erreur_relative_test, num_bins)
@@ -636,7 +603,7 @@ plt.show()
 
 # ### A quel moment se trompe-t-on le plus ?
 
-plt.plot(forecastTest['ds'], erreur_relative_test, 'r')
+plt.plot(YconsoTest['ds'], erreur_relative_test, 'r')
 plt.title("erreur relative sur la periode de test")
 plt.show()
 
@@ -644,7 +611,7 @@ plt.show()
 threshold = 0.18
 
 mask = (erreur_relative_test >= threshold)
-forecastTest['ds'].loc[mask]
+forecastTest['ds'].loc[mask] #### ne marche pas
 # -
 
 # ## Feature engineering
@@ -667,7 +634,7 @@ list(colsRF)
 # ### Entrainement du modèle
 
 # La cellule peut prendre un peu de temps à exécuter
-rfTrain = RandomForestRegressor(n_estimators=30, max_features=colsRF.size, n_jobs=3)
+rfTrain = RandomForestRegressor(n_estimators=30, max_features=colsRF.size, n_jobs=3, oob_score = True, bootstrap = True)
 rfTrain.fit(XinputTrain[colsRF], YconsoTrain['y'])
 
 # ### Prediction
@@ -683,6 +650,12 @@ evaluation(YconsoTrain, YconsoTest, forecastTrain, forecastTest)
 # on visualise nos previsions par rapport a la realité
 plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b', YconsoTest['ds'], forecastTest, 'r')
 plt.show()
+
+print('R^2 Training Score: {:.2f} \nOOB Score: {:.2f} \nR^2 Validation Score: {:.2f}'.format(rfTrain.score(XinputTrain[colsRF], YconsoTrain['y']), 
+                                                                                             rfTrain.oob_score_,
+rfTrain.score(XinputTest[colsRF], YconsoTest['y'])))
+
+
 # -
 
 evalWD,evalHour,evalJF = evaluation_par(XinputTest,YconsoTest,forecastTest)
