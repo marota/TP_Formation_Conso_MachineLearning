@@ -145,7 +145,7 @@ print(Yconso.shape)
 
 Xinput_zip = os.path.join(data_folder, "Xinput.zip")
 
-password = "FIFA_Meteo"
+password = "FIFA"
 
 
 # +
@@ -606,6 +606,8 @@ plt.show()
 plt.plot(YconsoTest['ds'], erreur_relative_test, 'r')
 plt.title("erreur relative sur la periode de test")
 plt.show()
+
+erreur_relative_test.head()
 
 # +
 threshold = 0.18
