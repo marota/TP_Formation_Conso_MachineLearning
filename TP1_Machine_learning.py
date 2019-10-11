@@ -155,12 +155,17 @@ zipfile_xinput.setpassword(bytes(password,'utf-8'))
 Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=",",engine='c',header=0)
 
 Xinput['ds'] = pd.to_datetime(Xinput['ds'])
-Xinput = Xinput[[s for s in Xinput.columns.get_values() if 'X' not in s]]
 # -
+
+# Vous disposez de relevés de températures en stations, d'une température France prévue et réalisée.
 
 print(Xinput.head(35))
 print(Xinput.shape)
 print(Xinput.columns)
+
+# Dans un premier temps, nous allons travailler uniquement avec la température France. Les températures en stations pourront être utilisées dans la partie Bonus, par exemple.
+
+Xinput = Xinput[['ds', 'holiday', 'Th_real_24h_avant', 'Th_prev']]
 
 # # Visualisation des données 
 #
@@ -293,7 +298,7 @@ plot_scatter_load('lag1W')
 # ## Visualiser la consommation en fonction de la température 
 # On voudrait savoir si la consommation nationale peut s'expliquer en regardant simplement la température moyenne sur la France. Pour cela, on peut tracer un nuage de points.
 
-plt.scatter(Xinput['FranceTh_prev'], Yconso['y'], alpha=0.2)
+plt.scatter(Xinput['Th_prev'], Yconso['y'], alpha=0.2)
 plt.show()
 
 # ### Question
@@ -350,8 +355,8 @@ threshold_temperature = 15
 # On commence par juste notre point horaire préféré
 
 # +
-temperature_real_veille = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['FranceTh_real_24h_avant'])
-temperature_prevu_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['FranceTh_prev'])
+temperature_real_veille = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['Th_real_24h_avant'])
+temperature_prevu_cible = float(Xinput.loc[Xinput['ds'] == datetime_a_predire]['Th_prev'])
 delta_temp = min(threshold_temperature, temperature_prevu_cible) - min(threshold_temperature, temperature_real_veille)
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
 
@@ -366,8 +371,8 @@ print("Modele 2 -- pred: {}, realisee: {}, erreur: {}%".format(y_pred_modele_nai
 # +
 y_pred = Xinput["lag1D"]
 
-temp_prev_with_threshold = np.minimum([threshold_temperature], Xinput['FranceTh_prev'].values)
-temp_actual_with_threshold = np.minimum([threshold_temperature], Xinput['FranceTh_real_24h_avant'].values)
+temp_prev_with_threshold = np.minimum([threshold_temperature], Xinput['Th_prev'].values)
+temp_actual_with_threshold = np.minimum([threshold_temperature], Xinput['Th_real_24h_avant'].values)
 
 delta_temp = temp_prev_with_threshold - temp_actual_with_threshold
 delta_MW_because_temp = delta_temp * delta_MW_par_degre
@@ -507,8 +512,8 @@ Xinput = Xinput.drop(['holiday'], axis = 1)
 threshold_temperature_heat = 15
 threshold_temperature_cool = 18
 
-Xinput['temp_prev_with_threshold_heat'] = np.maximum(0, threshold_temperature_heat - Xinput['FranceTh_prev'].values)
-Xinput['temp_prev_with_threshold_cool'] = np.maximum(0, Xinput['FranceTh_prev'].values - threshold_temperature_cool)
+Xinput['temp_prev_with_threshold_heat'] = np.maximum(0, threshold_temperature_heat - Xinput['Th_prev'].values)
+Xinput['temp_prev_with_threshold_cool'] = np.maximum(0, Xinput['Th_prev'].values - threshold_temperature_cool)
 # -
 
 #affichage de toutes les variables de base
@@ -525,9 +530,11 @@ colsToKeepHolidays = [v for v in Xinput.columns.get_values() if 'JF_' in v]
 # # Construction des jeux d'entrainement et de test
 
 # on souhaite un jeu de test qui commence à partir du 1er mai 2017
-dateDebut = datetime.datetime(year=2013, month=1, day=7)#pour éviter les NaN dans le jeu de données
-dateRupture = datetime.datetime(year=2017, month=5, day=1)#début du challenge prevision de conso
+dateDebut = datetime.datetime(year=2014, month=1, day=8)#pour éviter les NaN dans le jeu de données
+dateRupture = datetime.datetime(year=2017, month=12, day=1)#début du challenge prevision de conso
 nbJourlagRegresseur = 0
+
+Yconso.tail()
 
 XinputTrain, XinputTest, YconsoTrain, YconsoTest = prepareDataSetEntrainementTest(Xinput, Yconso, 
                                                                                   dateDebut, dateRupture, 
@@ -545,7 +552,7 @@ print("la proportion de data d'entrainement est de:" + str(YconsoTrain.shape[0] 
 # Le modèle naïf avec expertise métier a été inspiré de la forme de la courbe d'évolution de la consommation en fonction de la température en France. 
 # Pour rappel:
 
-plt.scatter(Xinput['FranceTh_prev'], Yconso['y'], alpha=0.2)
+plt.scatter(Xinput['Th_prev'], Yconso['y'], alpha=0.2)
 plt.show()
 
 # La consommation pourrait être modélisée par une fonction linéaire par morceaux de la température, avec une pente plus importante pour les températures froides que pour les températures élevées. Au lieu de fixer les gradients à 2400MW/°C et 0, ceux-ci pourraient être calibrés à partir des données.
@@ -561,6 +568,7 @@ mTrain = linear_model.LinearRegression(fit_intercept = False)
 # -
 
 mTrain.fit(XinputTrain[colsLR_simple], YconsoTrain[['y']])
+print(list(colsLR_simple))
 print('Coefficients: \n', mTrain.coef_)
 
 # ## Faire des prédictions
@@ -636,6 +644,7 @@ list(colsRF)
 # ### Entrainement du modèle
 
 # La cellule peut prendre un peu de temps à exécuter
+print(Xinput.head(20))
 rfTrain = RandomForestRegressor(n_estimators=30, max_features=colsRF.size, n_jobs=3, oob_score = True, bootstrap = True)
 rfTrain.fit(XinputTrain[colsRF], YconsoTrain['y'])
 
