@@ -23,3 +23,6 @@ dependencies:
     - ipywidgets
     - jupyter_contrib_nbextensions
     - jupytext
+    - pytz
+
+
