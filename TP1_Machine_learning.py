@@ -9,11 +9,13 @@
 # 
 # <img src="pictures/ChallengeConso.png" width=1000 height=100>
 # 
-# Comme dans ce challenge, nous voulons aider RTE à faire de meilleures prévisions de conso ! 
+# Comme dans ce challenge, nous voulons aider RTE à faire de meilleures prévisions de consommation ! 
 
 # ## Un outil: le Machine Learning
 # 
-# Pour cela, nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend et s'adapte au contexte sans programmer un système expert avec des "centaines" de règles en dur, par de la programmation logique. 
+# Les modèles actuels reposent sur des méthodes de régression linéaire et non-linéaires. 
+# 
+# Ici, nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend (mieux) et s'adapte (mieux) au contexte sans programmer un système expert avec des "centaines" de règles en dur, par de la programmation logique. 
 # 
 # Le Machine Learning nécessite toutefois de la connaissance experte dans le domaine d'intérêt pour créer des modèles pertinents et efficaces. En effet, si notre modèle embarque trop de variables peu explicatives, il sera noyé dans l'information, surapprendra sur les exemples qu'on lui a montrés, et aura du mal à généraliser en prédisant avec justesse sur de nouveaux exemples. 
 
