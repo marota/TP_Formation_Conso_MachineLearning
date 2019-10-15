@@ -24,7 +24,4 @@ dependencies:
     - jupyter_contrib_nbextensions
     - jupytext
     - pytz
-  - postBuild:
-    - jupyter-nbextension enable ToC2  --py --user
-
 
