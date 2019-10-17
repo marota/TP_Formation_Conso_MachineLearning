@@ -1,67 +1,70 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Le problème
+# # Le problème : la prévision de consommation électrique
 # 
-# Pour garantir l'équilibre offre-demande à chaque instant, RTE construit ses propres prévisions de la consommation nationale, régionale, et locale. 
+# Pour garantir l'équilibre offre-demande à chaque instant et gérer l'acheminement de l'électricité, RTE construit ses propres prévisions de la consommation nationale, régionale, et locale, à différentes échéances de temps (de l'infrajournalier au pluri-annuel).
 # 
-# Nous nous concentrons ici sur la prévision nationale. Un challenge lancé par RTE (https://dataanalyticspost.com/wp-content/uploads/2017/06/Challenge-RTE-Prevision-de-Consommation.pdf) a permis de tester des approches alternatives aux modèles internes (POPCORN, PREMIS).
+# Ici on se focalise sur un problème particulier : **la prévision de la consommation électrique nationale horaire à horizon J+1** (on suppose qu'on connaît toutes les données jusqu'au jour J inclus). 
 # 
-# <img src="pictures/ChallengeConso.png" width=1000 height=100>
+# ## Les données : Eco2mix
 # 
-# Comme dans ce challenge, nous voulons aider RTE à faire de meilleures prévisions de consommation ! 
-
-# ## Un outil: le Machine Learning
+# La courbe de charge France est disponible sur eco2mix :
+# http://www.rte-france.com/fr/eco2mix/eco2mix
+# ou sur application mobile.
 # 
-# Les modèles actuels reposent sur des méthodes de régression linéaire et non-linéaires. 
+# Vous pouvez naviguer sur le site pour vous familiariser avec les données sur lesquelles vous allez travailler.
 # 
-# Ici, nous allons avoir recours au Machine Learning. Cela nous permettra de créer un modèle qui apprend (mieux) et s'adapte (mieux) au contexte sans programmer un système expert avec des "centaines" de règles en dur, par de la programmation logique. 
+# ## Objectif :
 # 
-# Le Machine Learning nécessite toutefois de la connaissance experte dans le domaine d'intérêt pour créer des modèles pertinents et efficaces. En effet, si notre modèle embarque trop de variables peu explicatives, il sera noyé dans l'information, surapprendra sur les exemples qu'on lui a montrés, et aura du mal à généraliser en prédisant avec justesse sur de nouveaux exemples. 
-
-# ## Une difficulté: le feature engineering
+# Au cours de ce TP, nous allons aborder les différentes étapes nécessaires à la construction d'un modèle de prévision de consommation :
 # 
-# Au-delà de la simple sélection de variables pertinentes, on fait surtout ce que l'on appelle du feature engineering avec notre expertise: on crée des variables transformées ou agrégées, comme une consommation moyenne sur le mois précédent ou une température moyenne sur la France, pour guider l'algorithme et l'aider à apprendre sur l'information la plus pertinente et synthétique. Cela implique de bien connaître nos données, de passer du temps à les visualiser, et de les prétraiter avant de les fournir au modèle de machine-learning.
+# 1) Formalisation du problème: que souhaite-t-on prédire (quel est mon Y) ? Avec quelles variables explicatives (quel est mon X) ?
 # 
-# Nous allons ici voir ce que cela implique en terme de développement et d'implémentation de participer à un tel challenge, en montrant les capacités du Machine Learning sur la base de modèles "classiques".
+# 2) Collecte des données: où se trouvent les données ? Quel est le format ? Comment les récupérer ? (FACULTATIF - voir TP "TP1_Preparation_donnees")
 # 
-# ## Ce que l'on va voir dans ce premier TP :
-# 1) Formaliser le problème: que souhaite-t-on prédire (quel est mon Y) ? Avec quelles variables explicatives (quel est mon X) ?
+# 3) Import des données et analyses descriptives : visualiser des séries temporelles, statistiques descriptives
 # 
-# 2) Collecter les données: où se trouvent les données ? Quel est le format ? Comment les récupérer ? (FACULTATIF - voir TP "TP1_Preparation_donnees")
+# 4) Transformation des données (feature engineering) pour entrainer et tester un premier modèle
 # 
-# 3) Investiguer les données: visualiser des séries temporelles, faire quelques statistiques descriptives
+# 5) Création de prévision à dire d'expert pour servir de référence.
 # 
-# 4) Préparer les données: pour entrainer et tester un premier modèle
+# 6) Découpage des données : apprentissage - test
 # 
-# 5) Créer et entrainer un premier modèle simple: ce sera notre baseline
+# 7) Evaluer un modèle
 # 
-# 6) Evaluer un modèle
+# 8) Tester des algorithmes de référence : régression linéaire, forêts aléatoires, xgboost
 # 
-# 7) Itérer en créant de nouveaux modèles avec de nouvelles variables explicatives
+# 9) Itérer à partir des modèles testés pour améliorer les prévisions
 # 
-# 8) Jouez: créer vos propres modèles, tester sur une saison différente, tester sur une région différente, faire une prévision avec incertitudes, détecter des outliers
+# Nous verrons qu'une difficulté majeure réside dans la construction des "bonnes" variables explicatives ("garbage in, garbage out").
 # 
-# ## To be continued
+# **Le notebook est parsemé de questions (<font color='green'>en vert </font>). Vous pouvez y répondre sur la feuille fournie.**
+# 
+# ## Méthodes de prévision considérées
+# 
+# Les modèles actuels reposent sur des méthodes de régression linéaire et non-linéaires. Nous étudierons ici les limites de la régression linéaire.
+# 
+# Pour améliorer les prévisions, nous aurons recours aux méthodes dites de Machine Learning. Ces méthodes ne dépendent pas d'une formalisation a priori du lien entre les variables explicatives X et la variable à expliquer Y. 
+# Elles sont souvent moins interprétables mais peuvent être plus efficaces en prévision. Elles peuvent nécessiter plus de temps de calcul et plus de données pour cela.
+# 
+# Construire un bon modèle d'apprentissage nécessite en général de la connaissance experte dans le domaine d'intérêt pour créer des modèles pertinents et efficaces. 
+# 
+# ## To be continued : deep learning
+# 
 # Le deuxième TP permettra d'investiguer les modèles "Deep" avec réseaux de neurones, en montrant le moindre besoin en feature engineering et leur plus grande capacité à absorber l'information grâce aux représentations hiérarchiques qu'ils créent.
 
-# ## Dimensionnement en temps
-# On prévoit un une durée d'environ 2h pour ce TP1, debrief inclus :
-# - 20-30 minutes pour charger et préparer les données [FACULTATIF]
-# - 30-40 minutes pour analyser et visualiser les données
-# - 45-60 minutes pour créer, entrainer, évaluer et interpréter les modèles
-
-# ## Se familiariser avec le problème: Eco2mix
-# Quand on parle de courbe de consommation France, il y a une application incontournable : eco2mix !
-# Allons voir à quoi ressemblent ces courbes de consommation, pour nous faire une idée du problème et se donner quelques intuitions:
-# http://www.rte-france.com/fr/eco2mix/eco2mix
-# ou sur application mobile
-
-# # On passe au code : import de librairies et configuration
-
-# ** L'aide de python est accessible en tapant help(nom_de_la_commande) **
-
-# ## Chargement des Librairies
+# # Environnement de travail 
+# 
+# Ceci est un notebook jupyter. Il permet d'exécuter du code python, d'afficher des résultats et d'écrire du texte pour décrire l'ensemble de l'étude.
+# 
+# <font color='red'>
+#     
+# **NB : L'aide de python est accessible en tapant help(nom_de_la_commande)**
+# 
+# </font>
+# 
+# ## Chargement des packages
 
 # In[ ]:
 
@@ -70,35 +73,37 @@
 # Si vous exécuter ce notebook depuis votre PC, il faudra peut-etre installer certaines librairies avec 
 # 'pip install ma_librairie'
 import os  # accès aux commandes système
+
 import datetime  # structure de données pour gérer des objets calendaires
 import pytz # gestion des fuseaux horaires
+from datetime import timezone
 import pandas as pd  # gérer des tables de données en python
 import numpy as np  # librairie d'opérations mathématiques
-import matplotlib.pyplot as plt  # tracer des visualisations
+from math import sqrt
+
 import sklearn  # librairie de machine learning
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn import linear_model
 from sklearn.ensemble import RandomForestRegressor
-from math import sqrt
+import xgboost as xgb
+
+import matplotlib.pyplot as plt  # tracer des visualisations
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-import shutil  # move ou copier fichier
 import zipfile  # compresser ou décompresser fichier
-import urllib3 # téléchargement de fichier
-
-from collections import OrderedDict
-
-import seaborn as sns
 
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 get_ipython().run_line_magic('autosave', '0')
 
 
-# ## Configuration
-# Choix du répertoire de travail "data_folder" dans lequel tous les fichiers csv seront entreposés
+# ## Données disponibles
+# 
+# Choix du répertoire de travail "data_folder" dans lequel tous les fichiers csv seront entreposés. Ici le répertoire s'appelle *data*.
+# 
+# Ensuite on affiche les fichiers du répertoire pour vérification
 
 # In[ ]:
 
@@ -109,46 +114,58 @@ data_folder = os.path.join(os.getcwd(), "data")
 # In[ ]:
 
 
-# Petite vérification
 print("Mon repertoire est : {}".format(data_folder))
 print("Fichiers contenus dans ce répertoire :")
 for file in os.listdir(data_folder):
     print(" - " + file)
 
 
-# # Récupération des données
+# # Récupération des données dans Python
 # 
-# Dans cette partie nous allons charger les fichiers csv nécessaires pour l'analyse, puis les convertir en data-frame python.
-# Les données brutes ont été pré-traitées à l'aide du notebook TP1_Preparation_donnees :
+# Dans cette partie nous allons charger les fichiers csv nécessaires pour l'analyse, puis les convertir en data-frame python : 
 # - Yconso.csv
 # - Xinput.csv
+# 
+# Rappel : Les données brutes ont été pré-traitées à l'aide du notebook TP1_Preparation_donnees.ipynb pour obtenir ces deux fichiers.
+# 
+# ## import de Yconso.csv
 
 # In[ ]:
 
 
 Yconso_csv = os.path.join(data_folder, "Yconso.csv")
 Yconso = pd.read_csv(Yconso_csv)
+print(Yconso.head(5)) # affichage des premières lignes
+print(Yconso.dtypes) # affichage du type de données pour chaque colonne
 
 
-# La colonne "ds" contient des objets de type string. On va la convertir en objets de type "datetime" plus approprié.  
+# La colonne "ds" contient la date, mais celle-ci n'est pas reconnue en tant que telle mais en tant que chaîne de caractères (https://pbpython.com/pandas_dtypes.html). On va la convertir en objet de type "datetime" plus approprié pour extraire des informations comme le jour de la semaine ou l'heure.  
 # Pour plus d'information, voir le TP1_Preparation_donnees.
 
 # In[ ]:
 
 
-from datetime import timezone
 Yconso['ds'] = pd.to_datetime(Yconso['ds'],utc=True)
+print(Yconso.dtypes)
+print(Yconso.head(5))
 
+
+# Visuellemement cela ne change rien.
+# 
+# On peut aussi afficher la dimension du DataFrame (toujours s'assurer que cela correspond aux valeurs attendues) : 
 
 # In[ ]:
 
 
-print(Yconso.head(5))
 print(Yconso.shape)
 
 
+# ## Import de Xinput.csv
+# 
 # **Attention : Les données Xinput sont encryptées dans un fichier zip. du fait de données météo**  
 # Pour les lire vous avez besoin d'un mot de passe qui ne peut vous être donné que dans le cadre d'un travail au sein de RTE.
+# 
+# Sinon, la lecture se déroule comme pour le fichier Yconso.csv : transformation en datetime de la colonne *ds* et vérification des dimensions.
 
 # In[ ]:
 
@@ -159,7 +176,7 @@ Xinput_zip = os.path.join(data_folder, "Xinput.zip")
 # In[ ]:
 
 
-password = 'FIFA2019'
+password = ''
 
 
 # In[ ]:
@@ -173,16 +190,20 @@ Xinput = pd.read_csv(zipfile_xinput.open('Xinput.csv'),sep=",",engine='c',header
 Xinput['ds'] = pd.to_datetime(Xinput['ds'],utc=True)
 
 
-# Vous disposez de relevés de températures en stations, d'une température France prévue et réalisée.
+# Vous disposez de relevés de températures en stations (voir le fichier *data/StationsMeteoRTE.csv* pour plus d'informations), d'une température France prévue (pour l'instant considéré) et réalisée (24h avant).
 
 # In[ ]:
 
 
-print(Xinput.head(35))
+print("dimension de X")
 print(Xinput.shape)
+print("colonnes de X")
 print(Xinput.columns)
+print("aperçu de de X")
+print(Xinput.head(35))
 
 
+# 
 # Dans un premier temps, nous allons travailler **uniquement avec la température France.** Les températures en stations pourront être utilisées dans la partie Bonus, par exemple.
 
 # In[ ]:
@@ -190,6 +211,13 @@ print(Xinput.columns)
 
 Xinput = Xinput[['ds', 'holiday', 'Th_real_24h_avant', 'Th_prev']]
 
+
+# <font color='green'>
+# 
+# * Quelles sont les variables disponibles (dans Xinput et Yconso)?
+# * Quelles sont les dimensions (nombre d’observations et de variables) de Xinput et Yconso après lecture des fichiers csv?
+# 
+# </font>
 
 # # Visualisation des données 
 # 
@@ -201,11 +229,17 @@ Xinput = Xinput[['ds', 'holiday', 'Th_real_24h_avant', 'Th_prev']]
 # - échantillons de données
 # - profils de courbe de consommation journaliers et saisonniers
 # - visualisations de corrélation entre conso J et conso retardée
-# - visualisations des séries temporelles des températures
-# - calculs de corrélations entre la température et les différentes stations météo
-
+# 
 # ## Calcul de statistiques descriptives sur la consommation nationale
-# A l'aide de la fonction _describe_.
+# 
+# A l'aide de la fonction *describe*, on calcule les indicateurs classiques. On cherche les données manquantes avec la fonction *isnull*.
+# 
+
+# In[ ]:
+
+
+Yconso['ds'].describe()
+
 
 # In[ ]:
 
@@ -219,8 +253,15 @@ Yconso['y'].describe()
 Yconso['y'].isnull().sum()
 
 
+# <font color='green'>
+# 
+# * Quelle est la valeur moyenne de la consommation horaire? son min et son max? 
+# * Quelle est la période temporelle étudiée?
+# 
+# </font>
+
 # ## Visualiser la consommation d'un jour particulier
-# On souhaite visualiser la consommation réalisée pour un jour donné de l'historique.
+# On souhaite visualiser la consommation réalisée pour un jour donné de l'historique. Pour cela on construit une fonction.
 
 # In[ ]:
 
@@ -240,8 +281,14 @@ def plot_load(var_load, year, month, day):
 plot_load(Yconso, 2016, 12, 20)
 
 
+# <font color='green'>
+# 
+# * Afficher un jour ouvré d’hiver, un jour ouvré d’été, commenter.
+# 
+# </font>
+
 # ## Afficher une semaine arbitraire de consommation
-# On pourra modifier la fonction précédente en rajoutant le timedelta en paramètre.
+# On modifie la fonction précédente en rajoutant le timedelta en paramètre.
 
 # In[ ]:
 
@@ -261,6 +308,12 @@ def plot_load_timedelta(var_load, year, month, day, delta_days):
 
 plot_load_timedelta(Yconso, 2016, 12, 20, delta_days=7)
 
+
+# <font color='green'>
+# 
+# * Commenter.
+# 
+# </font>
 
 # ## Observation des profils de la consommation pour les mois d'hiver et les mois d'été
 # Toujours dans le but d'appréhender nos données, on va regarder les profils moyens pour les mois d'été et pour ceux d'hiver. On va également observer le min et le max pour avoir une idée de la variabilité du signal.
@@ -329,7 +382,6 @@ plt.show()
 # - du jour précédent, 
 # - de la semaine précédente.
 # 
-# On regarde ensuite si la consommation réalisée peut se deviner à partir de ces observations.
 
 # In[ ]:
 
@@ -345,7 +397,7 @@ Xinput['lag1W'] = Yconso['y'].shift(24*7)
 Xinput.head(24 * 7 + 1)
 
 
-# On regarde maintenant graphiquement si on a une belle corrélation ou non :
+# On trace maintenant les nuages de points afin de voir s'il y a corrélation ou non :
 
 # In[ ]:
 
@@ -364,8 +416,15 @@ plot_scatter_load('lag1D')
 plot_scatter_load('lag1W')
 
 
+# <font color='green'>
+#     
+# * Quelle(s) variable(s) vous semble(nt) pertinentes pour construire un modèle de prévision à J+1?
+# 
+# </font>
+
 # ## Visualiser la consommation en fonction de la température 
-# On voudrait savoir si la consommation nationale peut s'expliquer en regardant simplement la température moyenne sur la France. Pour cela, on peut tracer un nuage de points.
+# 
+# On voudrait savoir si la consommation nationale peut s'expliquer en regardant simplement la température moyenne sur la France. Pour cela, on peut aussi tracer un nuage de points.
 
 # In[ ]:
 
@@ -374,10 +433,14 @@ plt.scatter(Xinput['Th_prev'], Yconso['y'], alpha=0.2)
 plt.show()
 
 
-# ### Question
-# Que pensez-vous de ce nuage ? Est-ce suffisant ?
+# <font color='green'>
+#     
+# * Que pensez-vous de ce nuage ? 
+# * Quelles autres variables explicatives proposeriez-vous? De quels types sont-elles?
+# 
+# <font color='green'>
 
-# # Bricolage d'un modèle prédictif naïf
+# # Construction d'un modèle prédictif naïf
 # 
 # <img src="pictures/hommeNaif.png" width=500 height=60>
 
@@ -501,7 +564,9 @@ def prepareDataSetEntrainementTest(Xinput, Yconso, dateDebut, dateRupture, nbJou
 # Créons la fonction modelError qui va calculer pour un échantillon (Y, Y_hat) différents scores :
 # - erreur relative moyenne (MAPE en %)
 # - erreur relative max (en %)
-# - rmse (en MW)
+# - RMSE (en MW)
+# 
+# Cette fonction est ensuite utilisée par les fonctions *evaluation* et *evaluation_par* qui nous permettront d'évaluer nos modèles.
 # 
 
 # In[ ]:
@@ -540,20 +605,21 @@ def evaluation(YTrain, YTest, YTrainHat, YTestHat):
 
 
 def evaluation_par(X, Y, Yhat,avecJF=True):
-    Y['weekday'] = Y['ds'].dt.weekday
-    Y['hour'] = Y['ds'].dt.hour
+    Ytmp = Y
+    Ytmp['weekday'] = Ytmp.ds.dt.weekday
+    Ytmp['hour'] = Ytmp.ds.dt.hour
     if(avecJF):
-        Y['JoursFeries'] = X['JoursFeries']
-    Y['APE'] = np.abs(Y['y']-Yhat)/Y['y']
-    dataWD = Y[['weekday','APE']]
+        Ytmp['JoursFeries'] = X['JoursFeries']
+    Ytmp['APE'] = np.abs(Ytmp['y']-Yhat)/Ytmp['y']
+    dataWD = Ytmp[['weekday','APE']]
     groupedWD = dataWD.groupby(['weekday'], as_index=True)
     statsWD = groupedWD.aggregate([np.mean])
-    dataHour = Y[['hour','APE']]
+    dataHour = Ytmp[['hour','APE']]
     groupedHour = dataHour.groupby(['hour'], as_index=True)
     statsHour = groupedHour.aggregate([np.mean])
     
     if(avecJF):
-        dataJF = Y[['JoursFeries','APE']]
+        dataJF = Ytmp[['JoursFeries','APE']]
         groupedJF = dataJF.groupby(['JoursFeries'], as_index=True)
         statsJF = groupedJF.aggregate([np.mean])
     else:
@@ -562,12 +628,18 @@ def evaluation_par(X, Y, Yhat,avecJF=True):
     return statsWD, statsHour, statsJF
 
 
-# ## Preparation de Xinput
+# # Feature engineering : préparation de Xinput
+# 
+# L'objectif de cette partie est d'enrichir Xinput à partir des données initiales. Il s'agit notamment d'exploiter les différentes informations calendaires disponibles.
+# 
+# Dans un premier temps, on supprime la consommation retardée d'une heure, non disponible pour notre exercice de prévision J+1.
+# Et on vérifie le travail.
+# 
 
 # In[ ]:
 
 
-Xinput = Xinput.drop(['lag1H'],axis=1)  # on supprime la consommation retardée d'une heure, non disponible pour notre exercice de prévision
+Xinput = Xinput.drop(['lag1H'],axis=1)  
 
 
 # In[ ]:
@@ -577,7 +649,7 @@ print(Xinput.shape)
 print(Xinput.columns)
 
 
-# On encode les données calendaires en one-hot encoding pour le modèle.
+# Ensuite, on encode les données calendaires en one-hot encoding pour le modèle. Autrement dit, on construit pour chaque modalité, une variable binaire associée.
 # Cet encodage est nécessaire pour que le modèle mathématique puisse appréhender la notion de date.
 
 # In[ ]:
@@ -620,21 +692,24 @@ print(Xinput.shape)
 print(Xinput.columns)
 
 
+# Pour les données météo, on récupère aussi la prévision effectuée pour la veille. 
+
 # In[ ]:
 
 
-# Récupération des prévisions météo à J+1 pour la veille
 colsToKeepWeather = [s for s in Xinput.columns.get_values() if 'Th_prev' in s]
 lag_colsToKeepWeather = [ s + "_J_1" for s in colsToKeepWeather ]
 Xinput[lag_colsToKeepWeather] = Xinput[colsToKeepWeather].shift(24)
-time = pd.to_datetime(Xinput['ds'], yearfirst=True,utc=True)
-Xinput['posan']= time.dt.dayofyear
 
+
+# On récupère aussi le jour de l'année grâce à la fonction *dayofyear*, ainsi que les jours fériés. On crée une variable binaire associée à chaque jour férié.
 
 # In[ ]:
 
 
 #Récupération des jours fériés dans Xinput
+time = pd.to_datetime(Xinput['ds'], yearfirst=True,utc=True)
+Xinput['posan']= time.dt.dayofyear
 encodedHolidays = pd.get_dummies(Xinput[['holiday']], prefix = "JF")
 encodedHolidays['JoursFeries'] = encodedHolidays.sum(axis = 1)
 Xinput = pd.concat([Xinput, encodedHolidays], axis = 1)
@@ -673,6 +748,10 @@ colsToKeepHolidays = [v for v in Xinput.columns.get_values() if 'JF_' in v]
 
 
 # # Construction des jeux d'entrainement et de test
+# 
+# Pour éviter de construire un modèle qui apprend "par coeur" sur ses données, et qui disposerait alors d'une capacité de généralisation faible, il est d'usage courant de disposer de plusieurs jeux de données (de caractéristiques similaires). Le minimum est de construire un jeu d'entraînement, sur lequel on estime le modèle, et un jeu de test, sur lequel on va appliquer le modèle. Rapidement dit : un bon modèle est un modèle dont la capacité prédictive ne se dégrade pas trop sur le jeu test.
+# 
+# Pour cela, on crée la fonction *prepareDataSetEntrainementTest* qui va permettre de couper Y et Xinput en deux parties.
 
 # In[ ]:
 
@@ -773,18 +852,27 @@ plt.show()
 colsLR_simple = np.concatenate(([s for s in XinputTrain.columns.get_values() if 'temp_prev_with_' in s], colsToKeepHour, colsToKeepWeekday, colsToKeepMonth))
 
 mTrain = linear_model.LinearRegression(fit_intercept = False)
+mTrain.fit(XinputTrain[colsLR_simple], YconsoTrain[['y']])
 
+
+# ## Interpréter le modèle 
 
 # In[ ]:
 
 
-mTrain.fit(XinputTrain[colsLR_simple], YconsoTrain[['y']])
 coef_joli = pd.DataFrame(np.concatenate(( np.array([colsLR_simple]).T,mTrain.coef_.T),axis=1),columns = ['variable','coefficient'])
 print(coef_joli)
 
 
+# <font color='green'>
+# 
+# * Commentez les coefficients de régression obtenus. 
+# * Comparez notamment les gradients obtenus avec le modèle naïf.
+# 
+# </font>
+
 # ## Faire des prédictions
-# Une fois qu'un modèle de prévision est entrainé, il ne s'avère utile que s'il est performant sur de nouvelles situations. Faisons une prévision sur notre jeu de test.
+# Une fois qu'un modèle de prévision est entrainé, il ne s'avère utile que s'il est performant sur de nouvelles situations. Faisons une prévision sur notre jeu de test. Traçons les courbes obtenues et calculons les scores.
 
 # In[ ]:
 
@@ -796,8 +884,6 @@ forecastTrain = np.concatenate(mTrain.predict(XinputTrain[colsLR_simple]))
 # In[ ]:
 
 
-# on visualise nos previsions 
-
 plt.scatter(forecastTest, YconsoTest[['y']])
 plt.show()
 
@@ -805,23 +891,15 @@ plt.plot(YconsoTest['ds'], YconsoTest['y'], 'b', YconsoTest['ds'], forecastTest,
 plt.show()
 
 
-# ## Interpreter le modèle 
-# Au vu des visualisations précédentes :
-# - quelles interprétations pouvez-vous faire du modèle?
-# - Comment varie le comportement de la courbe de consommation?
-
-# ## Evaluer l'erreur de prévision
-# Quelle est la performance de notre modèle sur ce jeu de test ?
-
 # In[ ]:
 
 
 evaluation(YconsoTrain, YconsoTest, forecastTrain,  forecastTest)
+evalWD,evalHour,evalJF = evaluation_par(XinputTest,YconsoTest,forecastTest,avecJF=True)
+print(str(round(evalWD*100,1)))
+print(str(round(evalHour*100,1)))
+print(str(round(evalJF*100,1)))
 
-
-# ## Enquêter autour des erreurs de prévision
-
-# ### Evaluation en fonction du jour de semaine, de l'heure, si jour férié ou non
 
 # ### Comment se distribue l'erreur ?
 
@@ -865,8 +943,15 @@ erreurs_df = pd.DataFrame(np.concatenate((YconsoTest[['ds','y']],np.array([forec
 print(erreurs_df[mask])
 
 
-# ## Feature engineering
-# Quelles variables explicatives peuvent nous permettre de créer un modele plus perfomant ?
+# Au vu des résultats précédents :
+# <font color= 'green'>
+# 
+# - que pensez-vous du modèle?
+# - comment se distribue l'erreur?
+# - quand se trompe-t-on le plus?
+# - quelles variables explicatives ajouter?
+# 
+# </font>
 
 # # Autres modèles : RandomForest et XGBoost
 
@@ -874,10 +959,9 @@ print(erreurs_df[mask])
 # 
 # <img src="pictures/randomForestExplain.png" width=500 height=30>
 
-# ### Préparation des données d'entrée
+# ### Choix des données d'entrée
 
 # In[ ]:
-
 
 
 colsRF = np.concatenate((['lag1D','lag1W'],
@@ -895,6 +979,12 @@ print(Xinput.head(20))
 rfTrain = RandomForestRegressor(n_estimators=30, max_features=colsRF.size, n_jobs=3, oob_score = True, bootstrap = True)
 rfTrain.fit(XinputTrain[colsRF], YconsoTrain['y'])
 
+
+# <font color='green'>
+# 
+# * Grâce à l'aide de la fonction, déterminer les paramètres de cette méthode
+# 
+# </font>
 
 # ### Prediction
 
@@ -937,17 +1027,17 @@ print(str(round(evalJF*100,1)))
 # In[ ]:
 
 
-import xgboost as xgb
-
-
-# In[ ]:
-
-
-xgbTrain = xgb.XGBRegressor( )
-xgbTrain.fit(XinputTrain[colsRF], YconsoTrain['y'])
+xgbTrain = xgb.XGBRegressor(objective='reg:squarederror')
+xgbTrain.fit(XinputTrain[colsRF], YconsoTrain['y'].values)
 forecastTestXGB = xgbTrain.predict(XinputTest[colsRF])
 forecastTrainXGB = xgbTrain.predict(XinputTrain[colsRF])
 
+
+# <font color='green'>
+# 
+# * Grâce à l'aide de la fonction, déterminer les paramètres de cette méthode
+# 
+# </font>
 
 # In[ ]:
 
@@ -964,10 +1054,6 @@ print(str(round(evalHour * 100,1)))
 print(str(round(evalJF * 100,1)))
 
 
-# ### Question
-# - Selon vous, pourquoi l'erreur max est significative pour tous les modèles ?
-# - Comment y remédier ?
-
 # # Bonus: à vous de jouer
 # 
 # Bravo ! Vous avez déjà créé un premier modèle performant pour faire des prévisions sur une fenêtre glissante à horizon 24h !
@@ -975,11 +1061,10 @@ print(str(round(evalJF * 100,1)))
 # Maintenant à vous de mettre votre expertise pour créer de nouveaux modèles.
 # 
 # Vous pouvez continuer à explorer le problème selon plusieurs axes:
-# - créer des modèles pour les régions françaises
-# - tester votre modèle sur une autre saison (l'hiver par exemple)
+# - choix de la méthode de modélisation
+# - apprendre votre modèle sur une période différente
 # - créer de nouvelles variables explicatives ? Quid de la météo et de la température? Des jours fériés ? Du feature engineering plus complexe...
 # - détecter des outliers dans les données
-# - etudiez les incertitudes et les possibilités offertes par PyStan
 # 
 # Mettez-vous en 3 groupes, explorez pendant 30 minutes, et restituez.
 
